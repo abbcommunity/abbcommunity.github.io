@@ -534,7 +534,7 @@ Topbar
 
 .dark #header .header-inner #logo a, .dark #header .header-inner #logo a span, .dark #header #header-wrap #logo a, .dark #header #header-wrap #logo a span, #header.dark .header-inner #logo a, #header.dark .header-inner #logo a span, #header.dark #header-wrap #logo a, #header.dark #header-wrap #logo a span { color: #000000; }
 
-.dark #header .header-inner .lines, .dark #header .header-inner .lines:before, .dark #header .header-inner .lines:after, .dark #header #header-wrap .lines, .dark #header #header-wrap .lines:before, .dark #header #header-wrap .lines:after, #header.dark .header-inner .lines, #header.dark .header-inner .lines:before, #header.dark .header-inner .lines:after, #header.dark #header-wrap .lines, #header.dark #header-wrap .lines:before, #header.dark #header-wrap .lines:after { background-color: #fff; }
+.dark #header .header-inner .lines, .dark #header .header-inner .lines:before, .dark #header .header-inner .lines:after, .dark #header #header-wrap .lines, .dark #header #header-wrap .lines:before, .dark #header #header-wrap .lines:after, #header.dark .header-inner .lines, #header.dark .header-inner .lines:before, #header.dark .header-inner .lines:after, #header.dark #header-wrap .lines, #header.dark #header-wrap .lines:before, #header.dark #header-wrap .lines:after { background-color: #000000; }
 
 .dark #header[data-transparent="true"]:not(.sticky-active) .header-inner, .dark #header[data-transparent="true"]:not(.sticky-active) #header-wrap, #header.dark[data-transparent="true"]:not(.sticky-active) .header-inner, #header.dark[data-transparent="true"]:not(.sticky-active) #header-wrap { background-color: transparent; }
 
@@ -981,7 +981,7 @@ Main Menu: Responsive
 
 .header-extras .topbar-dropdown .dropdown-list:before { content: " "; width: 0; height: 0; border-left: 9px solid transparent; border-right: 9px solid transparent; border-bottom: 9px solid #fff; top: -9px; right: 14px; position: absolute; }
 
-.dark .header-extras .p-dropdown a > span, .dark .header-extras a > i { color: #fff; }
+.dark .header-extras .p-dropdown a > span, .dark .header-extras a > i { color: #000000; }
 
 .dark .header-extras .lines, .dark .header-extras .lines:before, .dark .header-extras .lines:after { background-color: #fff; }
 
