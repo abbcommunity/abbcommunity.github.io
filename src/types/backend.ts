@@ -27,6 +27,7 @@ export interface MemberProfile {
   id: string;
   userId?: string;
   memberNumber?: string;
+  nik?: string;
   name: string;
   nickname?: string;
   email?: string;
@@ -34,6 +35,7 @@ export interface MemberProfile {
   address?: string;
   position?: string;
   chapter?: string;
+  timestamp?: string;
   joinDate?: string;
   joinYear?: number;
   photoURL?: string;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Plus, Search, Trash2, FileSpreadsheet, Upload, CheckCircle, AlertCircle } from 'lucide-react';
+import { Users, Plus, Search, Trash2, FileSpreadsheet, Upload, CheckCircle, Download, HelpCircle } from 'lucide-react';
 import { useMembers } from '../../hooks/useMembers';
 import { memberService } from '../../services/memberService';
 import { useAuth } from '../../hooks/useAuth';
@@ -19,6 +19,7 @@ export const AdminMembersPage: React.FC = () => {
     email: '',
     phone: '',
     address: '',
+    nik: '',
     position: 'Anggota',
     chapter: 'Bekasi Chapter',
     joinYear: 2026,
@@ -35,6 +36,7 @@ export const AdminMembersPage: React.FC = () => {
   const filteredMembers = members.filter((m) =>
     m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     m.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    m.nik?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     m.chapter?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     m.position?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -49,6 +51,7 @@ export const AdminMembersPage: React.FC = () => {
           email: formData.email,
           phone: formData.phone,
           address: formData.address,
+          nik: formData.nik,
           position: formData.position,
           chapter: formData.chapter,
           joinYear: formData.joinYear,
@@ -66,6 +69,7 @@ export const AdminMembersPage: React.FC = () => {
         email: '',
         phone: '',
         address: '',
+        nik: '',
         position: 'Anggota',
         chapter: 'Bekasi Chapter',
         joinYear: 2026,
@@ -89,11 +93,19 @@ export const AdminMembersPage: React.FC = () => {
     const lines = text.trim().split(/\r?\n/);
     if (lines.length === 0) return;
 
-    // Header detection
-    const firstLine = lines[0].toLowerCase();
-    const hasHeader = firstLine.includes('email') || firstLine.includes('nama') || firstLine.includes('alamat');
-    const startIndex = hasHeader ? 1 : 0;
+    // Header analysis
+    const headerLine = lines[0];
+    const headerCols = headerLine.split(headerLine.includes('\t') ? '\t' : ',').map((h) => h.trim().toLowerCase());
+    
+    // Check if line 0 is a header line
+    const isHeaderLine =
+      headerCols.some(h => h.includes('nama')) ||
+      headerCols.some(h => h.includes('email')) ||
+      headerCols.some(h => h.includes('kontak')) ||
+      headerCols.some(h => h.includes('nik')) ||
+      headerCols.some(h => h.includes('foto'));
 
+    const startIndex = isHeaderLine ? 1 : 0;
     const parsed: Partial<MemberProfile>[] = [];
 
     for (let i = startIndex; i < lines.length; i++) {
@@ -103,25 +115,80 @@ export const AdminMembersPage: React.FC = () => {
       const delimiter = line.includes('\t') ? '\t' : ',';
       const cols = line.split(delimiter).map((c) => c.trim().replace(/^"(.*)"$/, '$1'));
 
-      const email = cols[0] || '';
-      const name = cols[1] || '';
-      const address = cols[2] || '';
-      const phone = cols[3] || '';
-      const rawPhotoURL = cols[4] || '';
+      let name = '';
+      let email = '';
+      let phone = '';
+      let address = '';
+      let position = 'Anggota';
+      let chapter = 'Bekasi Chapter';
+      let nik = '';
+      let rawPhotoURL = '';
 
-      // Auto convert Google Drive links (e.g. https://drive.google.com/open?id=1aBSRn5GMsR8YsXJTgCyqLCS5cMO3ZPPI)
+      if (isHeaderLine) {
+        // Dynamic Header-based Mapping
+        headerCols.forEach((h, colIdx) => {
+          const val = cols[colIdx] || '';
+          if (h.includes('nama')) name = val;
+          else if (h.includes('email address') || h.includes('email')) email = val;
+          else if (h.includes('kontak') || h.includes('telp') || h.includes('hp')) phone = val;
+          else if (h.includes('alamat')) address = val;
+          else if (h.includes('jabatan') || h.includes('chapte')) {
+            if (val.includes('-')) {
+              const parts = val.split('-');
+              position = parts[0].trim();
+              chapter = parts[1].trim();
+            } else if (val) {
+              position = val;
+            }
+          } else if (h.includes('nik')) nik = val;
+          else if (h.includes('foto') || h.includes('profil') || h.includes('drive')) rawPhotoURL = val;
+        });
+      } else {
+        // Positional Mapping matching the 10-column layout:
+        // Col 0: Nama Anggota
+        // Col 1: Kontak (Email / Telp)
+        // Col 2: Alamat
+        // Col 3: Jabatan & Chapte
+        // Col 4: Status
+        // Col 5: Aksi
+        // Col 6: NIK
+        // Col 7: Timestamp
+        // Col 8: Email Address
+        // Col 9: Foto Profil Bebas
+        name = cols[0] || '';
+        const kontakCol = cols[1] || '';
+        if (kontakCol.includes('@')) email = kontakCol;
+        else phone = kontakCol;
+
+        address = cols[2] || '';
+        const jabChap = cols[3] || '';
+        if (jabChap.includes('-')) {
+          const parts = jabChap.split('-');
+          position = parts[0].trim();
+          chapter = parts[1].trim();
+        } else if (jabChap) {
+          position = jabChap;
+        }
+
+        nik = cols[6] || '';
+        if (cols[8]) email = cols[8];
+        rawPhotoURL = cols[9] || cols[4] || '';
+      }
+
+      // Convert Google Drive links automatically
       const photoURL = convertGoogleDriveUrl(rawPhotoURL);
 
-      if (name || email) {
+      if (name || email || nik) {
         parsed.push({
           name: name || 'Anggota ABB',
           email,
-          address,
           phone,
-          photoURL: photoURL || undefined,
-          position: 'Anggota',
-          chapter: 'Bekasi Chapter',
+          address,
+          nik,
+          position: position || 'Anggota',
+          chapter: chapter || 'Bekasi Chapter',
           joinYear: 2026,
+          photoURL: photoURL || undefined,
           status: 'active',
           visibility: 'public',
         });
@@ -154,6 +221,7 @@ export const AdminMembersPage: React.FC = () => {
         email: item.email || '',
         phone: item.phone || '',
         address: item.address || '',
+        nik: item.nik || '',
         position: item.position || 'Anggota',
         chapter: item.chapter || 'Bekasi Chapter',
         joinYear: item.joinYear || 2026,
@@ -163,7 +231,7 @@ export const AdminMembersPage: React.FC = () => {
       }));
 
       const count = await memberService.bulkImportMembers(itemsToImport, user.uid);
-      setImportStatus(`Berhasil mengimpor ${count} data anggota! (Link Google Drive dikonversi otomatis)`);
+      setImportStatus(`Berhasil mengimpor ${count} data anggota! (Format 10 Kolom & Link Drive terproses)`);
       setTimeout(() => {
         setIsImportModalOpen(false);
         setPastedData('');
@@ -186,6 +254,22 @@ export const AdminMembersPage: React.FC = () => {
     }
   };
 
+  const handleDownloadTemplate = () => {
+    const csvContent =
+      'Nama Anggota,Kontak (Email / Telp),Alamat,Jabatan & Chapte,Status,Aksi,NIK,Timestamp,Email Address,Foto Profil Bebas\n' +
+      'Adipta Yanuardie,08123456789,"Jl. Ahmad Yani No 2, Bekasi",Ketua Umum - Bekasi Chapter,active,valid,3275012345670001,2026-08-11 10:00:00,adipta@abbcommunity.id,https://drive.google.com/open?id=1aBSRn5GMsR8YsXJTgCyqLCS5cMO3ZPPI\n' +
+      'Fatwa,08198765432,"Jl. Sudirman No 45, Jakarta",Wakil Ketua Umum - Jakarta Chapter,active,valid,3171098765430002,2026-08-11 10:05:00,fatwa@abbcommunity.id,https://drive.google.com/open?id=1aBSRn5GMsR8YsXJTgCyqLCS5cMO3ZPPI';
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'template_import_anggota_abb.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -195,7 +279,7 @@ export const AdminMembersPage: React.FC = () => {
             <Users className="w-5 h-5 text-red-500" /> Manajemen Anggota ABB
           </h2>
           <p className="text-gray-400 text-xs mt-1">
-            Pengelolaan direktori anggota, kepengurusan, dan import data massal dari Excel/CSV (Mendukung Link Google Drive).
+            Pengelolaan direktori anggota, NIK, kepengurusan, dan import data massal Excel/CSV 10 Kolom.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -219,7 +303,7 @@ export const AdminMembersPage: React.FC = () => {
         <Search className="w-4 h-4 text-gray-400" />
         <input
           type="text"
-          placeholder="Cari anggota berdasarkan nama, email, jabatan, atau chapter..."
+          placeholder="Cari anggota berdasarkan nama, NIK, email, jabatan, atau chapter..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full bg-transparent text-xs text-white placeholder-gray-500 focus:outline-none"
@@ -232,10 +316,10 @@ export const AdminMembersPage: React.FC = () => {
           <thead>
             <tr className="border-b border-gray-800 text-gray-400 font-semibold uppercase text-[10px] tracking-wider bg-[#0C111A]">
               <th className="py-3 px-4">Nama Anggota</th>
+              <th className="py-3 px-4">NIK</th>
               <th className="py-3 px-4">Kontak (Email / Telp)</th>
               <th className="py-3 px-4">Alamat</th>
               <th className="py-3 px-4">Jabatan & Chapter</th>
-              <th className="py-3 px-4">Status</th>
               <th className="py-3 px-4 text-right">Aksi</th>
             </tr>
           </thead>
@@ -262,6 +346,7 @@ export const AdminMembersPage: React.FC = () => {
                       <p className="text-[10px] text-gray-500">Joined {m.joinYear || 2026}</p>
                     </div>
                   </td>
+                  <td className="py-3 px-4 font-mono text-gray-400 text-[11px]">{m.nik || '-'}</td>
                   <td className="py-3 px-4 text-gray-300">
                     <p className="font-mono text-gray-300">{m.email || '-'}</p>
                     <p className="text-[10px] text-gray-500">{m.phone || '-'}</p>
@@ -270,11 +355,6 @@ export const AdminMembersPage: React.FC = () => {
                   <td className="py-3 px-4 text-gray-300">
                     <p className="font-medium text-white">{m.position || 'Anggota'}</p>
                     <p className="text-[10px] text-gray-500">{m.chapter || 'Bekasi Chapter'}</p>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-800/40">
-                      {m.status}
-                    </span>
                   </td>
                   <td className="py-3 px-4 text-right">
                     <button
@@ -310,6 +390,15 @@ export const AdminMembersPage: React.FC = () => {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
+                  <label className="block text-gray-400 mb-1">NIK (Nomor Induk Kependudukan)</label>
+                  <input
+                    type="text"
+                    value={formData.nik}
+                    onChange={(e) => setFormData({ ...formData, nik: e.target.value })}
+                    className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-red-500 font-mono"
+                  />
+                </div>
+                <div>
                   <label className="block text-gray-400 mb-1">Email Address</label>
                   <input
                     type="email"
@@ -318,6 +407,8 @@ export const AdminMembersPage: React.FC = () => {
                     className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-red-500"
                   />
                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-gray-400 mb-1">No. Telepon / WhatsApp</label>
                   <input
@@ -327,18 +418,18 @@ export const AdminMembersPage: React.FC = () => {
                     className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-red-500"
                   />
                 </div>
+                <div>
+                  <label className="block text-gray-400 mb-1">Alamat Tempat Tinggal</label>
+                  <input
+                    type="text"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-red-500"
+                  />
+                </div>
               </div>
               <div>
-                <label className="block text-gray-400 mb-1">Alamat Tempat Tinggal</label>
-                <input
-                  type="text"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-red-500"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-400 mb-1">Link Foto Profil (Google Drive / Web)</label>
+                <label className="block text-gray-400 mb-1">Foto Profil Bebas (Google Drive URL)</label>
                 <input
                   type="text"
                   placeholder="https://drive.google.com/open?id=1aBSRn..."
@@ -391,10 +482,10 @@ export const AdminMembersPage: React.FC = () => {
       {/* Bulk Import Excel / CSV Modal */}
       {isImportModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#121824] border border-gray-800 rounded-2xl max-w-2xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col">
+          <div className="bg-[#121824] border border-gray-800 rounded-2xl max-w-3xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between border-b border-gray-800 pb-3">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <FileSpreadsheet className="w-5 h-5 text-emerald-400" /> Import Massal Data Anggota Excel / CSV
+                <FileSpreadsheet className="w-5 h-5 text-emerald-400" /> Import Massal Data Anggota Excel / CSV (10 Kolom)
               </h3>
               <button
                 onClick={() => setIsImportModalOpen(false)}
@@ -405,21 +496,25 @@ export const AdminMembersPage: React.FC = () => {
             </div>
 
             <div className="space-y-3 overflow-y-auto pr-1 text-xs">
-              <p className="text-gray-400 text-xs">
-                Unggah file <code className="text-emerald-400">.csv</code> atau salin-tempel baris tabel Excel dengan kolom urutan:
-                <br />
-                <span className="font-mono text-white bg-gray-800 px-1.5 py-0.5 rounded mt-1 inline-block">
-                  Email Address | Nama | Alamat | No. Telepon | Foto Profil Bebas (Drive URL)
-                </span>
-              </p>
-
-              <div className="p-3 bg-emerald-950/40 border border-emerald-800/40 rounded-xl text-emerald-300 text-[11px]">
-                💡 <strong>Sistem Otomatis:</strong> Link Google Drive seperti <code className="text-white">https://drive.google.com/open?id=1aBSRn...</code> atau <code className="text-white">https://drive.google.com/file/d/1aBSRn.../view</code> akan dikonversi menjadi foto langsung!
+              <div className="flex items-center justify-between bg-emerald-950/40 border border-emerald-800/40 p-3 rounded-xl">
+                <div>
+                  <p className="font-bold text-emerald-300">Struktur 10 Kolom Template Resmi ABB:</p>
+                  <p className="font-mono text-[10px] text-gray-300 mt-0.5">
+                    Nama Anggota | Kontak | Alamat | Jabatan & Chapte | Status | Aksi | NIK | Timestamp | Email Address | Foto Profil Bebas
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDownloadTemplate}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-[11px] flex items-center gap-1.5 shrink-0"
+                >
+                  <Download className="w-3.5 h-3.5" /> Unduh Template CSV
+                </button>
               </div>
 
               {/* Upload input */}
               <div>
-                <label className="block text-gray-300 font-semibold mb-1">Opsi 1: Unggah File CSV</label>
+                <label className="block text-gray-300 font-semibold mb-1">Opsi 1: Unggah File CSV / Excel</label>
                 <input
                   type="file"
                   accept=".csv,.txt"
@@ -430,10 +525,10 @@ export const AdminMembersPage: React.FC = () => {
 
               {/* Copy Paste Textarea */}
               <div>
-                <label className="block text-gray-300 font-semibold mb-1">Opsi 2: Salin-Tempel dari Excel (Copy-Paste)</label>
+                <label className="block text-gray-300 font-semibold mb-1">Opsi 2: Salin-Tempel Baris dari Excel (Copy-Paste)</label>
                 <textarea
                   rows={4}
-                  placeholder="Tempelkan baris dari Excel di sini (misal: user@gmail.com   Adipta Yanuardie   Jl. Ahmad Yani No 2   08123456789   https://drive.google.com/open?id=1aBSRn...)"
+                  placeholder="Tempelkan baris dari Excel di sini..."
                   value={pastedData}
                   onChange={(e) => parsePastedExcelCSV(e.target.value)}
                   className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-3 text-white font-mono text-[11px] focus:outline-none focus:border-emerald-500"
@@ -453,9 +548,10 @@ export const AdminMembersPage: React.FC = () => {
                           <th className="p-2">#</th>
                           <th className="p-2">Foto</th>
                           <th className="p-2">Nama</th>
+                          <th className="p-2">NIK</th>
                           <th className="p-2">Email</th>
-                          <th className="p-2">Alamat</th>
                           <th className="p-2">No. Telp</th>
+                          <th className="p-2">Jabatan & Chapter</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-800/50 text-gray-300 font-mono">
@@ -470,9 +566,10 @@ export const AdminMembersPage: React.FC = () => {
                               />
                             </td>
                             <td className="p-2 font-bold text-white">{row.name}</td>
+                            <td className="p-2 text-gray-400">{row.nik || '-'}</td>
                             <td className="p-2">{row.email || '-'}</td>
-                            <td className="p-2 text-gray-400 truncate max-w-[120px]">{row.address || '-'}</td>
                             <td className="p-2 text-gray-400">{row.phone || '-'}</td>
+                            <td className="p-2 text-gray-300">{row.position} - {row.chapter}</td>
                           </tr>
                         ))}
                       </tbody>
