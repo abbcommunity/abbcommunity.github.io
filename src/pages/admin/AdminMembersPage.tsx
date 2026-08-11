@@ -28,12 +28,12 @@ interface OperationState {
 }
 
 /**
- * RFC-4180 compliant CSV line parser.
- * Preserves commas inside double quotes (e.g. "Kampung dua, RT.012/RW.002 NO.34C, 17145.")
+ * RFC-4180 compliant CSV line parser with escaped quote ("") support.
+ * Handles double quotes in names like Hendro ""Blacky"" without breaking quote toggle.
  */
 const parseCSVLineWithQuotes = (line: string, delimiter: string): string[] => {
   if (delimiter === '\t') {
-    return line.split('\t').map((s) => s.trim().replace(/^"(.*)"$/, '$1'));
+    return line.split('\t').map((s) => s.trim().replace(/^"(.*)"$/, '$1').replace(/""/g, '"'));
   }
 
   const result: string[] = [];
@@ -42,16 +42,22 @@ const parseCSVLineWithQuotes = (line: string, delimiter: string): string[] => {
 
   for (let i = 0; i < line.length; i++) {
     const char = line[i];
+
     if (char === '"') {
-      inQuotes = !inQuotes;
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++; // Skip the second escaped quote
+      } else {
+        inQuotes = !inQuotes;
+      }
     } else if (char === delimiter && !inQuotes) {
-      result.push(current.trim().replace(/^"(.*)"$/, '$1'));
+      result.push(current.trim().replace(/^"(.*)"$/, '$1').replace(/""/g, '"'));
       current = '';
     } else {
       current += char;
     }
   }
-  result.push(current.trim().replace(/^"(.*)"$/, '$1'));
+  result.push(current.trim().replace(/^"(.*)"$/, '$1').replace(/""/g, '"'));
   return result;
 };
 
@@ -310,32 +316,35 @@ export const AdminMembersPage: React.FC = () => {
         rawPhotoURL = cols[9] || cols[4] || '';
       }
 
-      // --- SMART VALUE SANITIZATION & AUTO-CORRECTION RULES ---
-      // 1. Email vs NIK Disambiguation
+      // --- SMART DEEP NIK SEARCH & RE-DISAMBIGUATION ---
+      // If NIK is empty or contains address words, search entire row for real NIK pattern (e.g. ABB014, ABB015, or 6-16 digits)
+      const isInvalidNik = !nik || nik.match(/kab|bekasi|jabar|kec|kel|rt\.|rw\.|jln|jalan|gg|active|valid|status/i) || nik.includes('.');
+      if (isInvalidNik) {
+        if (nik && (nik.match(/kab|bekasi|jabar|kec|kel|rt\.|rw\.|jln|jalan|gg/i) || nik.includes('.'))) {
+          address = address ? `${address}, ${nik.replace(/"/g, '')}` : nik.replace(/"/g, '');
+        }
+        nik = '';
+
+        // Deep search across all columns for real NIK
+        for (const colVal of cols) {
+          const cleanedVal = colVal.trim().replace(/^"(.*)"$/, '$1');
+          if (cleanedVal.match(/^ABB\d{3,}$/i)) {
+            nik = cleanedVal.toUpperCase();
+            break;
+          }
+        }
+      }
+
+      // Email vs NIK Disambiguation
       if (email && !email.includes('@')) {
-        if (!nik || nik === 'active' || nik === 'valid') {
+        if (!nik || nik.match(/active|valid|status/i)) {
           nik = email;
         }
         email = '';
       }
 
-      // 2. Status string in NIK column
-      if (nik.toLowerCase() === 'active' || nik.toLowerCase() === 'valid' || nik.toLowerCase() === 'status') {
-        nik = '';
-      }
-
-      // 3. Postal code / address fragment in NIK column (e.g. '17145.')
-      if (nik.includes('.') || nik.endsWith('"') || nik.match(/^\d{5}\.?$/)) {
-        if (!nik.startsWith('ABB') && nik.length < 16) {
-          if (!address.includes(nik)) {
-            address = address ? `${address}, ${nik.replace(/"/g, '')}` : nik.replace(/"/g, '');
-          }
-          nik = '';
-        }
-      }
-
-      // 4. Address fragment in Position/Chapter column (e.g. 'RT.012/RW.002 NO.34C')
-      if (position.match(/RT\.|RW\.|NO\.|Blok|Kel\.|Kec\.|Jl\.|Jalan/i) || chapter.match(/RT\.|RW\.|NO\.|Blok|Kel\.|Kec\.|Jl\.|Jalan/i)) {
+      // Address fragment in Position/Chapter column (e.g. 'Jln Gg Masjid As Salam')
+      if (position.match(/RT\.|RW\.|NO\.|Blok|Kel\.|Kec\.|Jl\.|Jalan|Jln|Gg/i) || chapter.match(/RT\.|RW\.|NO\.|Blok|Kel\.|Kec\.|Jl\.|Jalan|Jln|Gg/i)) {
         const addrFragment = `${position} ${chapter}`.trim();
         address = address ? `${address}, ${addrFragment}` : addrFragment;
         position = 'Anggota';
