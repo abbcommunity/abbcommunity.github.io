@@ -139,10 +139,17 @@ export const treasuryService = {
 
   async updatePaymentRecord(id: string, updates: Partial<KasBillingRecord>, actorId: string): Promise<void> {
     const now = new Date().toISOString();
-    const updatedFields = {
+    const rawFields: Record<string, any> = {
       ...updates,
       updatedAt: now,
     };
+
+    // Clean undefined fields to prevent Firestore & LocalStorage serialization errors
+    const cleanFields: Record<string, any> = {};
+    Object.keys(rawFields).forEach((key) => {
+      const val = rawFields[key];
+      cleanFields[key] = val === undefined ? '' : val;
+    });
 
     const existing = getLocalKasRecords();
     let found = false;
@@ -150,7 +157,7 @@ export const treasuryService = {
     const updatedLocal = existing.map((rec) => {
       if (rec.id === id) {
         found = true;
-        return { ...rec, ...updatedFields };
+        return { ...rec, ...cleanFields };
       }
       return rec;
     });
@@ -166,8 +173,8 @@ export const treasuryService = {
         amount: updates.amount || DEFAULT_KAS_AMOUNT,
         status: updates.status || 'pending',
         createdAt: now,
-        ...updatedFields,
-      });
+        ...cleanFields,
+      } as KasBillingRecord);
     }
 
     saveLocalKasRecords(updatedLocal);
@@ -175,8 +182,8 @@ export const treasuryService = {
     // Sync to Firestore
     try {
       const docRef = doc(db, COLLECTION_NAME, id);
-      await setDoc(docRef, updatedFields, { merge: true });
-      await auditLogService.logAction(actorId, 'KAS_PAYMENT_UPDATED', 'kas_billings', id, updates);
+      await setDoc(docRef, cleanFields, { merge: true });
+      await auditLogService.logAction(actorId, 'KAS_PAYMENT_UPDATED', 'kas_billings', id, cleanFields);
     } catch (e) {
       console.warn('⚠️ Firestore update kas notice:', e);
     }

@@ -176,7 +176,7 @@ export const AdminTreasuryPage: React.FC = () => {
           amount: selectedRecord.amount || DEFAULT_KAS_AMOUNT,
           status: formStatus,
           paymentMethod: formMethod,
-          paymentDate: formStatus === 'paid' ? (formPaymentDate || nowTimestamp) : undefined,
+          paymentDate: formStatus === 'paid' ? (formPaymentDate || nowTimestamp) : '',
           proofUrl: formProofUrl,
           notes: formNotes,
           verifiedBy: (user as any)?.displayName || user?.email || 'Admin',
