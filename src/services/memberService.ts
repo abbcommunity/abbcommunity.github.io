@@ -90,7 +90,29 @@ export const memberService = {
       }
     });
 
-    const combined = Array.from(finalNikMap.values());
+    let combined = Array.from(finalNikMap.values());
+
+    // 3. Fallback to official seed membersData if combined is empty and not explicitly cleared by Admin
+    if (combined.length === 0) {
+      if (typeof window !== 'undefined' && localStorage.getItem('abb_members_cleared') === 'true') {
+        return [];
+      }
+      combined = membersData.map((m, idx) => ({
+        id: m.id,
+        name: m.name,
+        nik: m.nik || `ABB${String(idx + 1).padStart(3, '0')}`,
+        position: m.position,
+        chapter: m.chapter,
+        joinYear: m.joinYear,
+        status: 'active',
+        visibility: 'public',
+        motorcycle: { model: m.motorcycle },
+        photoURL: m.photo,
+        bio: m.bio,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }));
+    }
 
     // Helper to extract numeric value from NIK string (e.g., 'ABB001' -> 1, 'ABB082' -> 82)
     const extractNikNumber = (nikStr?: string | null): number => {
@@ -250,6 +272,15 @@ export const memberService = {
       return !isIdMatch && !isNikMatch;
     });
     saveLocalCustomMembers(updatedLocal);
+    if (updatedLocal.length === 0) {
+      try {
+        localStorage.setItem('abb_members_cleared', 'true');
+      } catch (e) {}
+    } else {
+      try {
+        localStorage.removeItem('abb_members_cleared');
+      } catch (e) {}
+    }
     
     const chunkSize = 15;
     let totalDeleted = 0;
