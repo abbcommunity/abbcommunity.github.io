@@ -83,6 +83,7 @@ export const AdminTreasuryPage: React.FC = () => {
   // Single Payment Form States
   const [formStatus, setFormStatus] = useState<KasPaymentStatus>('paid');
   const [formMethod, setFormMethod] = useState<KasPaymentMethod>('transfer');
+  const [formPaymentDate, setFormPaymentDate] = useState<string>('');
   const [formProofUrl, setFormProofUrl] = useState<string>('');
   const [formNotes, setFormNotes] = useState<string>('');
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -141,11 +142,18 @@ export const AdminTreasuryPage: React.FC = () => {
     }
   };
 
+  // Helper format timestamp penuh (YYYY-MM-DD HH:mm:ss)
+  const getNowTimestamp = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+  };
+
   // 1. Single Pemutihan / Payment
   const handleOpenPaymentModal = (record: KasBillingRecord) => {
     setSelectedRecord(record);
     setFormStatus(record.status || 'paid');
     setFormMethod(record.paymentMethod || 'transfer');
+    setFormPaymentDate(record.paymentDate || getNowTimestamp());
     setFormProofUrl(record.proofUrl || '');
     setFormNotes(record.notes || '');
     setIsPaymentModalOpen(true);
@@ -157,7 +165,7 @@ export const AdminTreasuryPage: React.FC = () => {
 
     setIsSaving(true);
     try {
-      const now = new Date().toISOString().split('T')[0];
+      const nowTimestamp = getNowTimestamp();
       await treasuryService.updatePaymentRecord(
         selectedRecord.id,
         {
@@ -168,7 +176,7 @@ export const AdminTreasuryPage: React.FC = () => {
           amount: selectedRecord.amount || DEFAULT_KAS_AMOUNT,
           status: formStatus,
           paymentMethod: formMethod,
-          paymentDate: formStatus === 'paid' ? selectedRecord.paymentDate || now : undefined,
+          paymentDate: formStatus === 'paid' ? (formPaymentDate || nowTimestamp) : undefined,
           proofUrl: formProofUrl,
           notes: formNotes,
           verifiedBy: (user as any)?.displayName || user?.email || 'Admin',
@@ -677,6 +685,22 @@ export const AdminTreasuryPage: React.FC = () => {
                 <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
+
+            {/* Tanggal & Jam Pembayaran */}
+            {formStatus === 'paid' && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-300 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-emerald-400" /> Tanggal & Jam Pembayaran *
+                </label>
+                <input
+                  type="text"
+                  placeholder="Format: YYYY-MM-DD HH:mm:ss (contoh: 2026-08-12 14:30:00)"
+                  value={formPaymentDate}
+                  onChange={(e) => setFormPaymentDate(e.target.value)}
+                  className="w-full bg-[#0C111A] border border-gray-700 text-white text-xs rounded-xl p-3 font-mono focus:outline-none focus:border-emerald-500 font-bold"
+                />
+              </div>
+            )}
 
             {/* Metode Pembayaran */}
             {formStatus === 'paid' && (
