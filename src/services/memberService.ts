@@ -52,14 +52,9 @@ export const memberService = {
   async getAllMembers(includePrivate = false): Promise<MemberProfile[]> {
     let firestoreDocs: MemberProfile[] = [];
     try {
-      const q = query(
-        collection(db, COLLECTION_NAME),
-        orderBy('name', 'asc')
-      );
-      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 2500));
-      const snap = await Promise.race([getDocs(q), timeoutPromise]);
-      
-      if (snap && 'docs' in snap) {
+      const colRef = collection(db, COLLECTION_NAME);
+      const snap = await getDocs(colRef).catch(() => null);
+      if (snap && snap.docs && snap.docs.length > 0) {
         firestoreDocs = snap.docs.map((d) => d.data() as MemberProfile);
       }
     } catch (err) {
@@ -69,15 +64,9 @@ export const memberService = {
     const localDocs = getLocalCustomMembers();
     const combinedMap = new Map<string, MemberProfile>();
 
-    // Merge firestore docs
-    firestoreDocs.forEach((doc) => combinedMap.set(doc.id, doc));
-    // Merge local docs
-    localDocs.forEach((doc) => combinedMap.set(doc.id, doc));
-
-    const combined = Array.from(combinedMap.values());
-
-    if (combined.length === 0) {
-      return membersData.map((m, idx) => ({
+    // 1. Add static base members first (Adipta, Fatwa, Doyok, etc.)
+    membersData.forEach((m, idx) => {
+      combinedMap.set(m.id, {
         id: m.id,
         name: m.name,
         nik: m.nik || `ABB${String(idx + 1).padStart(3, '0')}`,
@@ -91,11 +80,29 @@ export const memberService = {
         bio: m.bio,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      }));
-    }
+      });
+    });
 
-    if (includePrivate) return combined;
-    return combined.filter((m) => !m.visibility || m.visibility === 'public');
+    // 2. Merge local storage custom/imported members (so all 82 imported members persist 100%)
+    localDocs.forEach((doc) => {
+      if (doc && doc.id) {
+        combinedMap.set(doc.id, doc);
+      }
+    });
+
+    // 3. Merge Firestore live members
+    firestoreDocs.forEach((doc) => {
+      if (doc && doc.id) {
+        combinedMap.set(doc.id, doc);
+      }
+    });
+
+    const combined = Array.from(combinedMap.values());
+
+    // Sort alphabetically by name
+    combined.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+    return combined;
   },
 
   async getMemberById(id: string): Promise<MemberProfile | null> {
