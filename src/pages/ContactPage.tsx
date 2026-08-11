@@ -25,7 +25,7 @@ export const ContactPage: React.FC = () => {
     <div className="pt-28 pb-20 space-y-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       {/* Header */}
       <div className="text-center space-y-4 max-w-3xl mx-auto">
-        <Badge variant="glow" size="md">JOIN & KONTAK</Badge>
+        <Badge variant="blue" size="md">JOIN & KONTAK</Badge>
         <h1 className="text-4xl sm:text-5xl font-extrabold text-white font-display">
           Hubungi & Bergabung Dengan ABB
         </h1>
