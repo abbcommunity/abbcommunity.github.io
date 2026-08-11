@@ -99,8 +99,21 @@ export const memberService = {
 
     const combined = Array.from(combinedMap.values());
 
-    // Sort alphabetically by name
-    combined.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    // Helper to extract numeric value from NIK string (e.g., 'ABB001' -> 1, 'ABB082' -> 82)
+    const extractNikNumber = (nikStr?: string | null): number => {
+      if (!nikStr) return 999999;
+      const cleaned = nikStr.trim().replace(/^['"]+/, '').replace(/['"]+$/, '');
+      const match = cleaned.match(/\d+/);
+      return match ? parseInt(match[0], 10) : 999999;
+    };
+
+    // Sort numerically by NIK starting from ABB001 upwards
+    combined.sort((a, b) => {
+      const numA = extractNikNumber(a.nik);
+      const numB = extractNikNumber(b.nik);
+      if (numA !== numB) return numA - numB;
+      return (a.name || '').localeCompare(b.name || '');
+    });
 
     return combined;
   },
