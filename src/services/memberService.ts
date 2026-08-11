@@ -58,8 +58,9 @@ export const memberService = {
     let firestoreDocs: MemberProfile[] = [];
     try {
       const colRef = collection(db, COLLECTION_NAME);
-      const snap = await getDocs(colRef).catch(() => null);
-      if (snap && snap.docs && snap.docs.length > 0) {
+      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500));
+      const snap = await Promise.race([getDocs(colRef), timeoutPromise]).catch(() => null);
+      if (snap && typeof snap === 'object' && 'docs' in snap && snap.docs && snap.docs.length > 0) {
         firestoreDocs = snap.docs.map((d) => d.data() as MemberProfile);
       }
     } catch (err) {
