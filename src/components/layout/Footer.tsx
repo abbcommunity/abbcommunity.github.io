@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, Instagram, Facebook, Youtube, Mail, MapPin, Phone, Heart } from 'lucide-react';
+import { Shield, Instagram, MessageCircle, Youtube, Mail, MapPin, Phone, Heart } from 'lucide-react';
 import { siteConfig } from '../../data/siteConfig';
 
 export const Footer: React.FC = () => {
@@ -38,22 +38,25 @@ export const Footer: React.FC = () => {
                 href={siteConfig.social.instagram}
                 target="_blank"
                 rel="noreferrer"
-                className="w-9 h-9 rounded-lg bg-gray-900 border border-gray-800 flex items-center justify-center text-gray-400 hover:text-white hover:bg-blue-600 hover:border-blue-500 transition-all"
+                title="Instagram @abbcommunityrider"
+                className="w-9 h-9 rounded-lg bg-gray-900 border border-gray-800 flex items-center justify-center text-gray-400 hover:text-white hover:bg-pink-600 hover:border-pink-500 transition-all"
               >
                 <Instagram className="w-4 h-4" />
               </a>
               <a
-                href={siteConfig.social.facebook}
+                href={siteConfig.social.whatsapp}
                 target="_blank"
                 rel="noreferrer"
-                className="w-9 h-9 rounded-lg bg-gray-900 border border-gray-800 flex items-center justify-center text-gray-400 hover:text-white hover:bg-blue-600 hover:border-blue-500 transition-all"
+                title="WhatsApp Robby"
+                className="w-9 h-9 rounded-lg bg-gray-900 border border-gray-800 flex items-center justify-center text-gray-400 hover:text-white hover:bg-emerald-600 hover:border-emerald-500 transition-all"
               >
-                <Facebook className="w-4 h-4" />
+                <MessageCircle className="w-4 h-4 text-emerald-400" />
               </a>
               <a
                 href={siteConfig.social.youtube}
                 target="_blank"
                 rel="noreferrer"
+                title="YouTube @ABBCommunity"
                 className="w-9 h-9 rounded-lg bg-gray-900 border border-gray-800 flex items-center justify-center text-gray-400 hover:text-white hover:bg-red-600 hover:border-red-500 transition-all"
               >
                 <Youtube className="w-4 h-4" />

@@ -21,9 +21,9 @@ export const siteConfig = {
     mapsUrl: "https://maps.google.com/?q=Kayuringin+Jaya+Bekasi+Selatan",
   },
   social: {
-    instagram: "https://instagram.com/abbcommunity",
-    facebook: "https://facebook.com/abbcommunity",
-    youtube: "https://youtube.com/@abbcommunity",
+    instagram: "https://instagram.com/abbcommunityrider",
+    facebook: "https://wa.me/62895372115913",
+    youtube: "https://youtube.com/@ABBCommunity",
     whatsapp: "https://wa.me/62895372115913"
   }
 };

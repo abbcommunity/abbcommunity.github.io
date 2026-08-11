@@ -3,7 +3,7 @@ import { Badge } from '../components/ui/Badge';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { siteConfig } from '../data/siteConfig';
-import { MapPin, Mail, Phone, Instagram, Facebook, Youtube, Send, CheckCircle2, Upload, Image as ImageIcon, Camera } from 'lucide-react';
+import { MapPin, Mail, Phone, Instagram, MessageCircle, Youtube, Send, CheckCircle2, Upload, Image as ImageIcon, Camera } from 'lucide-react';
 import { memberService } from '../services/memberService';
 import { convertGoogleDriveUrl, getAvatarUrl, handleAvatarError } from '../utils/imageUtils';
 
@@ -122,13 +122,13 @@ export const ContactPage: React.FC = () => {
             <div className="pt-2">
               <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Ikuti Media Sosial Kami:</h4>
               <div className="flex gap-3">
-                <a href={siteConfig.social.instagram} target="_blank" rel="noreferrer" className="p-3 bg-gray-900 rounded-xl border border-gray-800 text-gray-300 hover:text-white hover:bg-blue-600 transition-all">
+                <a href={siteConfig.social.instagram} target="_blank" rel="noreferrer" title="Instagram @abbcommunityrider" className="p-3 bg-gray-900 rounded-xl border border-gray-800 text-gray-300 hover:text-white hover:bg-pink-600 transition-all">
                   <Instagram className="w-5 h-5" />
                 </a>
-                <a href={siteConfig.social.facebook} target="_blank" rel="noreferrer" className="p-3 bg-gray-900 rounded-xl border border-gray-800 text-gray-300 hover:text-white hover:bg-blue-600 transition-all">
-                  <Facebook className="w-5 h-5" />
+                <a href={siteConfig.social.whatsapp} target="_blank" rel="noreferrer" title="WhatsApp Robby" className="p-3 bg-gray-900 rounded-xl border border-gray-800 text-gray-300 hover:text-white hover:bg-emerald-600 transition-all">
+                  <MessageCircle className="w-5 h-5 text-emerald-400" />
                 </a>
-                <a href={siteConfig.social.youtube} target="_blank" rel="noreferrer" className="p-3 bg-gray-900 rounded-xl border border-gray-800 text-gray-300 hover:text-white hover:bg-red-600 transition-all">
+                <a href={siteConfig.social.youtube} target="_blank" rel="noreferrer" title="YouTube @ABBCommunity" className="p-3 bg-gray-900 rounded-xl border border-gray-800 text-gray-300 hover:text-white hover:bg-red-600 transition-all">
                   <Youtube className="w-5 h-5" />
                 </a>
               </div>
