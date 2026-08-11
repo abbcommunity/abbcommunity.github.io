@@ -180,9 +180,9 @@ export const AdminMembersPage: React.FC = () => {
       });
 
       setSelectedIds([]);
+      await refetch();
       setTimeout(() => {
         setDeleteOpState({ status: 'idle', message: '' });
-        refetch();
       }, 2500);
     } catch (err: any) {
       setDeleteOpState({

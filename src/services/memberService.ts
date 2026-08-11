@@ -263,6 +263,16 @@ export const memberService = {
     onProgress?: (deleted: number, total: number) => void
   ): Promise<number> {
     if (!ids || ids.length === 0) return 0;
+
+    // Purge local storage IMMEDIATELY by ID & Normalized NIK
+    const existing = getLocalCustomMembers();
+    const normalizedTargetKeys = ids.map((i) => normalizeNikKey(i) || i);
+    const updatedLocal = existing.filter((m) => {
+      const isIdMatch = ids.includes(m.id);
+      const isNikMatch = m.nik && normalizedTargetKeys.includes(normalizeNikKey(m.nik));
+      return !isIdMatch && !isNikMatch;
+    });
+    saveLocalCustomMembers(updatedLocal);
     
     const chunkSize = 15;
     let totalDeleted = 0;
@@ -278,7 +288,7 @@ export const memberService = {
 
       try {
         const commitPromise = batch.commit();
-        const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve('TIMEOUT'), 2500));
+        const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve('TIMEOUT'), 1500));
         await Promise.race([commitPromise, timeoutPromise]);
       } catch (err: any) {
         console.warn('⚠️ Bulk delete batch commit note:', err);
@@ -289,12 +299,8 @@ export const memberService = {
         onProgress(totalDeleted, ids.length);
       }
 
-      await new Promise((r) => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 10));
     }
-
-    const existing = getLocalCustomMembers();
-    const updatedLocal = existing.filter((m) => !ids.includes(m.id));
-    saveLocalCustomMembers(updatedLocal);
 
     try {
       await auditLogService.logAction(actorId, 'BULK_MEMBERS_DELETED', 'members', 'batch', { count: totalDeleted, deletedIds: ids });
@@ -327,7 +333,10 @@ export const memberService = {
 
   async deleteMember(id: string, actorId: string): Promise<void> {
     const existing = getLocalCustomMembers();
-    saveLocalCustomMembers(existing.filter((m) => m.id !== id));
+    const targetNikKey = normalizeNikKey(id);
+    saveLocalCustomMembers(
+      existing.filter((m) => m.id !== id && (targetNikKey ? normalizeNikKey(m.nik) !== targetNikKey : true))
+    );
 
     try {
       const docRef = doc(db, COLLECTION_NAME, id);
