@@ -15,15 +15,15 @@ export const siteConfig = {
     description: "Komunitas motor yang berbasis persaudaraan karyawan & jejaring profesional kesehatan serta pecinta adventure riding."
   },
   contact: {
-    address: "HQ ABB Community, Primaya Hospital Bekasi Barat, Jl. Jend. Ahmad Yani No.2, Bekasi",
-    email: "info@abbcommunity.id",
-    phone: "+62 812-9000-8810",
-    mapsUrl: "https://maps.google.com/?q=Primaya+Hospital+Bekasi+Barat",
+    address: "HQ ABB Community, Jl. KH. Noer Ali No.17-18, RT.001/RW.009, Kayuringin Jaya, Kec. Bekasi Sel., Kota Bks, Jawa Barat 17144",
+    email: "abbcommunityrider@gmail.com",
+    phone: "Administrator +62 895 - 3721 -15913",
+    mapsUrl: "https://maps.google.com/?q=Kayuringin+Jaya+Bekasi+Selatan",
   },
   social: {
     instagram: "https://instagram.com/abbcommunity",
     facebook: "https://facebook.com/abbcommunity",
     youtube: "https://youtube.com/@abbcommunity",
-    whatsapp: "https://wa.me/6281290008810"
+    whatsapp: "https://wa.me/62895372115913"
   }
 };
