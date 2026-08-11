@@ -68,11 +68,26 @@ export const memberService = {
     }
 
     const localDocs = getLocalCustomMembers();
-    const finalNikMap = new Map<string, MemberProfile>();
     const isCleared = typeof window !== 'undefined' && localStorage.getItem('abb_members_cleared') === 'true';
 
-    // 1. Seed official base members (ABB001 to ABB082) into finalNikMap (unless explicitly cleared by Admin)
-    if (!isCleared) {
+    // If real records exist in LocalStorage or Firestore, render ONLY real database records
+    const hasRealDatabaseRecords = localDocs.length > 0 || firestoreDocs.length > 0;
+    const finalNikMap = new Map<string, MemberProfile>();
+
+    if (hasRealDatabaseRecords) {
+      // Use EXCLUSIVELY real imported / registered members from Local Storage & Firestore
+      localDocs.concat(firestoreDocs).forEach((doc) => {
+        if (doc && doc.name) {
+          const nikKey = normalizeNikKey(doc.nik);
+          const nameKey = doc.name.trim().toLowerCase();
+          const key = nikKey || nameKey || doc.id;
+          if (key) {
+            finalNikMap.set(key, doc);
+          }
+        }
+      });
+    } else if (!isCleared) {
+      // Fall back to initial starter seed membersData ONLY if no database records exist
       membersData.forEach((m, idx) => {
         const nikStr = m.nik || `ABB${String(idx + 1).padStart(3, '0')}`;
         const nikKey = normalizeNikKey(nikStr);
@@ -93,18 +108,6 @@ export const memberService = {
         });
       });
     }
-
-    // 2. Override/merge with local storage custom/imported members and Firestore live members
-    localDocs.concat(firestoreDocs).forEach((doc) => {
-      if (doc && doc.name) {
-        const nikKey = normalizeNikKey(doc.nik);
-        const nameKey = doc.name.trim().toLowerCase();
-        const key = nikKey || nameKey || doc.id;
-        if (key) {
-          finalNikMap.set(key, doc);
-        }
-      }
-    });
 
     // Auto-sync local members to Cloud Firestore in background if missing from Firestore
     if (localDocs.length > 0) {
