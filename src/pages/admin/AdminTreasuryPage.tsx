@@ -20,6 +20,7 @@ import {
   X,
   Check,
   ShieldCheck,
+  ChevronDown,
 } from 'lucide-react';
 import { treasuryService, DEFAULT_KAS_AMOUNT } from '../../services/treasuryService';
 import { KasBillingRecord, KasPaymentMethod, KasPaymentStatus } from '../../types/backend';
@@ -443,23 +444,10 @@ export const AdminTreasuryPage: React.FC = () => {
         <Modal
           isOpen={isPaymentModalOpen}
           onClose={() => setIsPaymentModalOpen(false)}
+          title="Input Pembayaran Kas Anggota"
           maxWidth="md"
         >
           <form onSubmit={handleSavePayment} className="space-y-5">
-            <div className="flex items-center justify-between border-b border-gray-800 pb-3">
-              <h3 className="text-base font-extrabold text-white flex items-center gap-2">
-                <Wallet className="w-5 h-5 text-emerald-400" />
-                Input Pembayaran Kas Anggota
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsPaymentModalOpen(false)}
-                className="text-gray-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
             <div className="bg-[#0C111A] border border-gray-800 p-3.5 rounded-xl space-y-1 text-xs">
               <p className="text-gray-400">Nama Anggota: <strong className="text-white font-bold">{selectedRecord.memberName}</strong></p>
               <p className="text-gray-400">Nomor NIK: <strong className="text-emerald-400 font-mono font-bold">{selectedRecord.memberNik || '-'}</strong></p>
@@ -470,29 +458,35 @@ export const AdminTreasuryPage: React.FC = () => {
             {/* Status Pembayaran */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-gray-300">Status Pembayaran *</label>
-              <select
-                value={formStatus}
-                onChange={(e) => setFormStatus(e.target.value as KasPaymentStatus)}
-                className="w-full bg-[#0C111A] border border-gray-700 text-white text-xs rounded-xl p-2.5 focus:outline-none focus:border-emerald-500 font-sans"
-              >
-                <option value="paid">🟢 LUNAS (Paid)</option>
-                <option value="pending">🟡 PENDING (Belum Bayar)</option>
-                <option value="overdue">🔴 TUNGGAKAN (Overdue)</option>
-              </select>
+              <div className="relative">
+                <select
+                  value={formStatus}
+                  onChange={(e) => setFormStatus(e.target.value as KasPaymentStatus)}
+                  className="w-full bg-[#0C111A] border border-gray-700 text-white text-xs rounded-xl p-3 pr-10 appearance-none focus:outline-none focus:border-emerald-500 font-sans cursor-pointer"
+                >
+                  <option value="paid">🟢 LUNAS (Paid)</option>
+                  <option value="pending">🟡 PENDING (Belum Bayar)</option>
+                  <option value="overdue">🔴 TUNGGAKAN (Overdue)</option>
+                </select>
+                <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
             </div>
 
             {/* Metode Pembayaran */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-gray-300">Metode Pembayaran *</label>
-              <select
-                value={formMethod}
-                onChange={(e) => setFormMethod(e.target.value as KasPaymentMethod)}
-                className="w-full bg-[#0C111A] border border-gray-700 text-white text-xs rounded-xl p-2.5 focus:outline-none focus:border-emerald-500 font-sans"
-              >
-                <option value="transfer">🏦 Transfer Bank</option>
-                <option value="qris">📱 QRIS / E-Wallet</option>
-                <option value="cash">💵 Tunai / Cash (Ke Bendahara)</option>
-              </select>
+              <div className="relative">
+                <select
+                  value={formMethod}
+                  onChange={(e) => setFormMethod(e.target.value as KasPaymentMethod)}
+                  className="w-full bg-[#0C111A] border border-gray-700 text-white text-xs rounded-xl p-3 pr-10 appearance-none focus:outline-none focus:border-emerald-500 font-sans cursor-pointer"
+                >
+                  <option value="transfer">🏦 Transfer Bank</option>
+                  <option value="qris">📱 QRIS / E-Wallet</option>
+                  <option value="cash">💵 Tunai / Cash (Ke Bendahara)</option>
+                </select>
+                <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
             </div>
 
             {/* Link Bukti Transfer */}
@@ -503,7 +497,7 @@ export const AdminTreasuryPage: React.FC = () => {
                 placeholder="Tempelkan link gambar/Google Drive bukti transfer..."
                 value={formProofUrl}
                 onChange={(e) => setFormProofUrl(e.target.value)}
-                className="w-full bg-[#0C111A] border border-gray-700 text-white text-xs rounded-xl p-2.5 focus:outline-none focus:border-emerald-500 font-sans"
+                className="w-full bg-[#0C111A] border border-gray-700 text-white text-xs rounded-xl p-3 focus:outline-none focus:border-emerald-500 font-sans"
               />
             </div>
 
@@ -511,15 +505,15 @@ export const AdminTreasuryPage: React.FC = () => {
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-gray-300">Catatan Verifikator</label>
               <textarea
-                rows={2}
+                rows={2.5}
                 placeholder="Catatan tambahan (misal: Ditransfer via BCA, dll)..."
                 value={formNotes}
                 onChange={(e) => setFormNotes(e.target.value)}
-                className="w-full bg-[#0C111A] border border-gray-700 text-white text-xs rounded-xl p-2.5 focus:outline-none focus:border-emerald-500 font-sans"
+                className="w-full bg-[#0C111A] border border-gray-700 text-white text-xs rounded-xl p-3 focus:outline-none focus:border-emerald-500 font-sans"
               ></textarea>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-gray-800">
+            <div className="flex justify-end gap-2 pt-3 border-t border-gray-800">
               <button
                 type="button"
                 onClick={() => setIsPaymentModalOpen(false)}
@@ -545,21 +539,10 @@ export const AdminTreasuryPage: React.FC = () => {
         <Modal
           isOpen={isProofViewerOpen}
           onClose={() => setIsProofViewerOpen(false)}
+          title="Pratinjau Bukti Transfer Pembayaran Kas"
           maxWidth="lg"
         >
           <div className="space-y-4">
-            <div className="flex items-center justify-between border-b border-gray-800 pb-2">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Eye className="w-4 h-4 text-blue-400" /> Pratinjau Bukti Transfer Pembayaran Kas
-              </h3>
-              <button
-                onClick={() => setIsProofViewerOpen(false)}
-                className="text-gray-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
             <div className="bg-black/90 p-2 rounded-xl border border-gray-800 flex items-center justify-center min-h-[300px] max-h-[500px] overflow-auto">
               <img
                 src={activeProofUrl}
