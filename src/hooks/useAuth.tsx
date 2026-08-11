@@ -1,6 +1,6 @@
 import React, { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { onAuthStateChange, signInWithGoogle, logoutUser, FirebaseUser } from '../firebase/auth';
-import { db, doc, getDoc, setDoc } from '../firebase/firestore';
+import { db, doc, setDoc } from '../firebase/firestore';
 import { UserProfile, UserRole } from '../types/backend';
 import { isFirebaseConfigured } from '../firebase/config';
 
@@ -37,50 +37,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (firebaseUser) {
         setUser(firebaseUser);
         const now = new Date().toISOString();
+
+        // Grant super_admin profile immediately so UI proceeds instantly without network delay
+        const activeProfile: UserProfile = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email || 'abbcommunityrider@gmail.com',
+          displayName: firebaseUser.displayName || 'Administrator ABB',
+          photoURL: firebaseUser.photoURL || undefined,
+          role: 'super_admin',
+          status: 'active',
+          createdAt: now,
+          updatedAt: now,
+          lastLoginAt: now,
+        };
+
+        setProfile(activeProfile);
+
+        // Sync with Firestore in background
         try {
           const userDocRef = doc(db, 'users', firebaseUser.uid);
-          const snap = await getDoc(userDocRef);
-
-          if (snap.exists()) {
-            const data = snap.data() as UserProfile;
-            const activeRole: UserRole = 'super_admin'; // Grant super_admin for admin portal login
-            const updatedProfile: UserProfile = {
-              ...data,
-              role: activeRole,
-              lastLoginAt: now,
-            };
-            setProfile(updatedProfile);
-            await setDoc(userDocRef, { role: activeRole, lastLoginAt: now }, { merge: true });
-          } else {
-            const newProfile: UserProfile = {
-              uid: firebaseUser.uid,
-              email: firebaseUser.email || '',
-              displayName: firebaseUser.displayName || 'Administrator ABB',
-              photoURL: firebaseUser.photoURL || undefined,
-              role: 'super_admin',
-              status: 'active',
-              createdAt: now,
-              updatedAt: now,
-              lastLoginAt: now,
-            };
-            await setDoc(userDocRef, newProfile);
-            setProfile(newProfile);
-          }
+          await setDoc(userDocRef, activeProfile, { merge: true });
         } catch (err) {
-          console.warn('⚠️ Gagal memuat/menyimpan profil user Firestore, mengaktifkan profil admin:', err);
-          setProfile({
-            uid: firebaseUser.uid,
-            email: firebaseUser.email || 'abbcommunityrider@gmail.com',
-            displayName: firebaseUser.displayName || 'Administrator ABB',
-            photoURL: firebaseUser.photoURL || undefined,
-            role: 'super_admin',
-            status: 'active',
-            createdAt: now,
-            updatedAt: now,
-            lastLoginAt: now,
-          });
+          console.warn('⚠️ Firestore user profile sync note (admin mode active):', err);
         }
-      } else if (!user) {
+      } else {
+        setUser(null);
         setProfile(null);
       }
       setLoading(false);
