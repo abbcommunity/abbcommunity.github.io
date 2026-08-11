@@ -5,19 +5,19 @@ import { getStorage, connectStorageEmulator, FirebaseStorage } from 'firebase/st
 import { getFunctions, connectFunctionsEmulator, Functions } from 'firebase/functions';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyMockApiKeyForDevelopmentOnly12345',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'abb-community-prod.firebaseapp.com',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'abb-community-prod',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'abb-community-prod.appspot.com',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '123456789012',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:123456789012:web:abc123def456',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyA2i2WahpN93wtX_zwOY-Fb-LNeJpVek80',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'abbcommunityridersites.firebaseapp.com',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'abbcommunityridersites',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'abbcommunityridersites.firebasestorage.app',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '533040607988',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:533040607988:web:1051baee97e3b1eadbe4a1',
 };
 
 // Check if valid production or local credentials exist
 export const isFirebaseConfigured = (): boolean => {
   return Boolean(
-    import.meta.env.VITE_FIREBASE_API_KEY &&
-    import.meta.env.VITE_FIREBASE_PROJECT_ID
+    (import.meta.env.VITE_FIREBASE_API_KEY || firebaseConfig.apiKey) &&
+    (import.meta.env.VITE_FIREBASE_PROJECT_ID || firebaseConfig.projectId)
   );
 };
 
