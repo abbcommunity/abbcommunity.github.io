@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "default": "abb-community-prod",
+    "development": "abb-community-dev",
+    "staging": "abb-community-staging"
+  }
+}

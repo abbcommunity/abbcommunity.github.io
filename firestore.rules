@@ -1,0 +1,174 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() && (
+        (request.auth.token.keys().hasAll(['role']) && request.auth.token.role == role) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == role)
+      );
+    }
+
+    function isAdmin() {
+      return hasRole('admin') || isSuperAdmin();
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && (
+        (request.auth.token.keys().hasAll(['role']) && request.auth.token.role == 'super_admin') ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'super_admin')
+      );
+    }
+
+    function isEditor() {
+      return hasRole('editor') || isAdmin();
+    }
+
+    function isCoordinator() {
+      return hasRole('coordinator') || hasRole('chairman') || hasRole('vice_chairman') || isAdmin();
+    }
+
+    function isMember() {
+      return isAuthenticated() && (
+        hasRole('member') || isCoordinator() || isEditor()
+      );
+    }
+
+    // --- Users Collection ---
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isOwner(userId) && (!request.resource.data.keys().hasAll(['role']) || request.resource.data.role == 'member' || request.resource.data.role == 'guest');
+      allow update: if isOwner(userId) && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])) || isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // --- Members Collection ---
+    match /members/{memberId} {
+      allow read: if resource.data.visibility == 'public' || isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // --- Organization Positions ---
+    match /organization_positions/{positionId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // --- Events Collection ---
+    match /events/{eventId} {
+      allow read: if resource.data.status == 'published' || resource.data.status == 'completed' || isAuthenticated();
+      allow create, update, delete: if isCoordinator();
+
+      // Event Registrations Subcollection
+      match /registrations/{userId} {
+        allow read: if isOwner(userId) || isCoordinator();
+        allow create: if isAuthenticated() && isOwner(userId);
+        allow update: if isOwner(userId) || isCoordinator();
+        allow delete: if isOwner(userId) || isCoordinator();
+      }
+
+      // Event Attendance Subcollection
+      match /attendance/{userId} {
+        allow read: if isOwner(userId) || isCoordinator();
+        allow create, update, delete: if isCoordinator();
+      }
+    }
+
+    // --- Stories / Articles ---
+    match /stories/{storyId} {
+      allow read: if resource.data.status == 'published' || isEditor();
+      allow create: if isEditor();
+      allow update: if isEditor() && (
+        // Editors can only touch draft/review, admins can set published/archived
+        resource.data.authorId == request.auth.uid || isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    // --- Galleries ---
+    match /galleries/{galleryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+
+      match /photos/{photoId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+    }
+
+    // --- Garage (Motorcycles) ---
+    match /garage/{garageId} {
+      allow read: if resource.data.visibility == 'public' || isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isAuthenticated() && (resource.data.ownerId == request.auth.uid || isAdmin());
+      allow delete: if isAuthenticated() && (resource.data.ownerId == request.auth.uid || isAdmin());
+    }
+
+    // --- Rides ---
+    match /rides/{rideId} {
+      allow read: if true;
+      allow write: if isCoordinator();
+    }
+
+    // --- Social Impact ---
+    match /socialImpact/{activityId} {
+      allow read: if resource.data.status == 'published' || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // --- Announcements ---
+    match /announcements/{announcementId} {
+      allow read: if resource.data.target == 'public' || isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // --- Documents ---
+    match /documents/{documentId} {
+      allow read: if resource.data.visibility == 'public' ||
+                 (resource.data.visibility == 'members_only' && isAuthenticated()) ||
+                 (resource.data.visibility == 'admin_only' && isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // --- User Notifications ---
+    match /users/{userId}/notifications/{notificationId} {
+      allow read: if isOwner(userId);
+      allow update: if isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow create: if isAdmin();
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    // --- Audit Logs (Immutable) ---
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      // Immutable write: only authenticated system write, no updates/deletes permitted
+      allow create: if isAuthenticated();
+      allow update, delete: if false;
+    }
+
+    // --- Stats Aggregation ---
+    match /stats/{statId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // --- Contact Messages ---
+    match /contactMessages/{messageId} {
+      allow create: if true; // Public contact form submission
+      allow read, update, delete: if isAdmin();
+    }
+  }
+}

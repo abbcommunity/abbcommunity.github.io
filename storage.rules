@@ -1,0 +1,63 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isImage() {
+      return request.resource.contentType.matches('image/(jpeg|png|webp|avif|gif)');
+    }
+
+    function isDocument() {
+      return request.resource.contentType.matches('application/(pdf|msword|vnd.openxmlformats-officedocument.wordprocessingml.document|zip)');
+    }
+
+    function isMaxSize(maxSizeMB) {
+      return request.resource.size <= maxSizeMB * 1024 * 1024;
+    }
+
+    // Public avatars / member photos
+    match /members/{memberId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated() && isImage() && isMaxSize(5);
+    }
+
+    // Event media
+    match /events/{eventId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated() && isImage() && isMaxSize(10);
+    }
+
+    // Gallery images
+    match /gallery/{galleryId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated() && isImage() && isMaxSize(10);
+    }
+
+    // Story images
+    match /stories/{storyId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated() && isImage() && isMaxSize(10);
+    }
+
+    // Garage / Bike photos
+    match /garage/{memberId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated() && isImage() && isMaxSize(10);
+    }
+
+    // Ride images
+    match /rides/{rideId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated() && isImage() && isMaxSize(10);
+    }
+
+    // Documents
+    match /documents/{documentId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (isDocument() || isImage()) && isMaxSize(20);
+    }
+  }
+}
