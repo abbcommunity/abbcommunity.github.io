@@ -42,6 +42,12 @@ export const AdminMembersPage: React.FC = () => {
     message: '',
   });
 
+  // Status state for Multiple Delete
+  const [deleteOpState, setDeleteOpState] = useState<OperationState>({
+    status: 'idle',
+    message: '',
+  });
+
   // Form single member state
   const [formData, setFormData] = useState({
     name: '',
@@ -95,13 +101,47 @@ export const AdminMembersPage: React.FC = () => {
     }
 
     setIsDeletingBulk(true);
+    // 1. Status: MENUNGGU PROSES (Loading Delete)
+    setDeleteOpState({
+      status: 'loading',
+      message: `⏳ Menunggu proses: Sedang menghapus 0 / ${selectedIds.length} anggota yang dipilih dari Cloud Firestore...`,
+      importedCount: 0,
+      totalCount: selectedIds.length,
+      progressPercent: 0,
+    });
+
     try {
-      const count = await memberService.bulkDeleteMembers(selectedIds, user.uid);
-      alert(`Berhasil menghapus ${count} data anggota.`);
+      const count = await memberService.bulkDeleteMembers(
+        selectedIds,
+        user.uid,
+        (deleted, total) => {
+          const percent = Math.round((deleted / total) * 100);
+          setDeleteOpState({
+            status: 'loading',
+            message: `⏳ Menunggu proses: Sedang menghapus ${deleted} dari ${total} anggota yang dipilih... (${percent}%)`,
+            progressPercent: percent,
+          });
+        }
+      );
+
+      // 2. Status: BERHASIL (Success Delete)
+      setDeleteOpState({
+        status: 'success',
+        message: `✅ BERHASIL: Menghapus ${count} data anggota secara permanen!`,
+        progressPercent: 100,
+      });
+
       setSelectedIds([]);
-      refetch();
+      setTimeout(() => {
+        setDeleteOpState({ status: 'idle', message: '' });
+        refetch();
+      }, 2500);
     } catch (err: any) {
-      alert(`Gagal menghapus data massal: ${err.message || err}`);
+      // 3. Status: GAGAL (Error Delete)
+      setDeleteOpState({
+        status: 'error',
+        message: `❌ GAGAL: Terjadi kesalahan saat menghapus data massal: ${err.message || err}`,
+      });
     } finally {
       setIsDeletingBulk(false);
     }
@@ -195,29 +235,18 @@ export const AdminMembersPage: React.FC = () => {
           const val = (cols[colIdx] || '').trim();
           if (!val) return;
 
-          // 1. NIK
           if (h === 'nik' || h.startsWith('nik')) {
             nik = val;
-          }
-          // 2. Email Address
-          else if ((h.includes('email address') || h === 'email') && val.includes('@')) {
+          } else if ((h.includes('email address') || h === 'email') && val.includes('@')) {
             email = val;
-          }
-          // 3. Phone / Kontak
-          else if (h.includes('kontak') || h.includes('telp') || h.includes('hp')) {
+          } else if (h.includes('kontak') || h.includes('telp') || h.includes('hp')) {
             if (val.includes('@')) email = val;
             else phone = val;
-          }
-          // 4. Nama
-          else if (h.includes('nama')) {
+          } else if (h.includes('nama')) {
             name = val;
-          }
-          // 5. Alamat
-          else if (h.includes('alamat')) {
+          } else if (h.includes('alamat')) {
             address = val;
-          }
-          // 6. Jabatan & Chapter
-          else if (h.includes('jabatan') || h.includes('chapte')) {
+          } else if (h.includes('jabatan') || h.includes('chapte')) {
             if (val.includes('-')) {
               const parts = val.split('-');
               position = parts[0].trim();
@@ -225,24 +254,11 @@ export const AdminMembersPage: React.FC = () => {
             } else {
               position = val;
             }
-          }
-          // 7. Foto Profil / Drive URL
-          else if (h.includes('foto') || h.includes('profil') || h.includes('drive')) {
+          } else if (h.includes('foto') || h.includes('profil') || h.includes('drive')) {
             rawPhotoURL = val;
           }
         });
       } else {
-        // Positional Mapping matching 10-column template:
-        // Col 0: Nama Anggota
-        // Col 1: Kontak (Email / Telp)
-        // Col 2: Alamat
-        // Col 3: Jabatan & Chapte
-        // Col 4: Status
-        // Col 5: Aksi
-        // Col 6: NIK
-        // Col 7: Timestamp
-        // Col 8: Email Address
-        // Col 9: Foto Profil Bebas
         name = cols[0] || '';
         const kontakCol = cols[1] || '';
         if (kontakCol.includes('@')) email = kontakCol;
@@ -263,7 +279,6 @@ export const AdminMembersPage: React.FC = () => {
         rawPhotoURL = cols[9] || cols[4] || '';
       }
 
-      // --- SMART VALUE AUTO-DISAMBIGUATION ---
       if (email && !email.includes('@')) {
         if (!nik || nik === 'active' || nik === 'valid') {
           nik = email;
@@ -469,6 +484,49 @@ export const AdminMembersPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Multiple Delete / Main Operation Status Indicator Banner */}
+      {deleteOpState.status !== 'idle' && (
+        <div
+          className={`p-4 border rounded-2xl space-y-2 text-xs font-semibold transition-all shadow-xl ${
+            deleteOpState.status === 'loading'
+              ? 'bg-blue-950/80 border-blue-800 text-blue-200 shadow-blue-900/30'
+              : deleteOpState.status === 'success'
+              ? 'bg-emerald-950/80 border-emerald-800 text-emerald-200 shadow-emerald-900/30'
+              : 'bg-red-950/80 border-red-800 text-red-200 shadow-red-900/30'
+          }`}
+        >
+          <div className="flex items-center gap-2.5">
+            {deleteOpState.status === 'loading' && (
+              <Loader2 className="w-5 h-5 text-blue-400 animate-spin shrink-0" />
+            )}
+            {deleteOpState.status === 'success' && (
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+            )}
+            {deleteOpState.status === 'error' && (
+              <XCircle className="w-5 h-5 text-red-400 shrink-0" />
+            )}
+
+            <div className="flex-1">
+              <p className="font-bold text-sm">
+                {deleteOpState.status === 'loading' && '⏳ MENUNGGU PROSES PENGHAPUSAN MASSAL (Processing...)'}
+                {deleteOpState.status === 'success' && '✅ PROSES PENGHAPUSAN BERHASIL (Success)'}
+                {deleteOpState.status === 'error' && '❌ PROSES PENGHAPUSAN GAGAL (Error)'}
+              </p>
+              <p className="mt-0.5 font-normal text-xs">{deleteOpState.message}</p>
+            </div>
+          </div>
+
+          {deleteOpState.status === 'loading' && deleteOpState.progressPercent !== undefined && (
+            <div className="w-full bg-gray-800 rounded-full h-2 overflow-hidden mt-2">
+              <div
+                className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${deleteOpState.progressPercent}%` }}
+              ></div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Filter, Search & Bulk Delete Toolbar */}
       <div className="bg-[#101622] border border-gray-800 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="relative w-full sm:w-96 flex items-center gap-3">
@@ -490,10 +548,18 @@ export const AdminMembersPage: React.FC = () => {
             </span>
             <button
               onClick={handleBulkDelete}
-              disabled={isDeletingBulk}
-              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold text-xs rounded-lg transition flex items-center gap-1.5 shadow-md shadow-red-600/30"
+              disabled={isDeletingBulk || deleteOpState.status === 'loading'}
+              className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold text-xs rounded-lg transition flex items-center gap-2 shadow-md shadow-red-600/30"
             >
-              <Trash2 className="w-3.5 h-3.5" /> {isDeletingBulk ? 'Menghapus...' : `Hapus (${selectedIds.length}) Terpilih`}
+              {isDeletingBulk ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Menghapus...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-3.5 h-3.5" /> Hapus ({selectedIds.length}) Terpilih
+                </>
+              )}
             </button>
           </div>
         )}
