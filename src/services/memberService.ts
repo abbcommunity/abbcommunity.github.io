@@ -11,6 +11,7 @@ import {
   where,
   orderBy,
   limit,
+  writeBatch,
 } from '../firebase/firestore';
 import { MemberProfile } from '../types/backend';
 import { membersData } from '../data/members';
@@ -101,6 +102,31 @@ export const memberService = {
     await setDoc(newRef, data);
     await auditLogService.logAction(actorId, 'MEMBER_CREATED', 'members', newRef.id, { name: member.name });
     return newRef.id;
+  },
+
+  async bulkImportMembers(
+    items: Omit<MemberProfile, 'id' | 'createdAt' | 'updatedAt'>[],
+    actorId: string
+  ): Promise<number> {
+    const now = new Date().toISOString();
+    const batch = writeBatch(db);
+    let count = 0;
+
+    for (const item of items) {
+      const newRef = doc(collection(db, COLLECTION_NAME));
+      const data: MemberProfile = {
+        ...item,
+        id: newRef.id,
+        createdAt: now,
+        updatedAt: now,
+      };
+      batch.set(newRef, data);
+      count++;
+    }
+
+    await batch.commit();
+    await auditLogService.logAction(actorId, 'BULK_MEMBERS_IMPORTED', 'members', 'batch', { count });
+    return count;
   },
 
   async updateMember(id: string, updates: Partial<MemberProfile>, actorId: string): Promise<void> {

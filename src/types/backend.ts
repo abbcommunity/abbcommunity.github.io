@@ -29,6 +29,9 @@ export interface MemberProfile {
   memberNumber?: string;
   name: string;
   nickname?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
   position?: string;
   chapter?: string;
   joinDate?: string;
