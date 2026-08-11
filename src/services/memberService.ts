@@ -42,36 +42,34 @@ export const memberService = {
       );
       const snapshot = await getDocs(q);
       
-      if (!snapshot.empty) {
-        const docs = snapshot.docs.map((d) => d.data() as MemberProfile);
-        if (includeMembersOnly) return docs;
-        return docs.filter((m) => m.visibility === 'public');
-      }
+      // If Firestore query succeeded, return actual docs (even if empty array [])
+      const docs = snapshot.docs.map((d) => d.data() as MemberProfile);
+      if (includeMembersOnly) return docs;
+      return docs.filter((m) => m.visibility === 'public');
     } catch (err) {
-      console.warn('⚠️ Firestore offline/empty for members, fallback to local data.', err);
+      console.warn('⚠️ Firestore error fetching members, fallback to local data.', err);
+      // Fallback to static mock data ONLY if Firestore request fails completely
+      return membersData.map((m) => ({
+        id: m.id,
+        name: m.name,
+        position: m.position,
+        chapter: m.chapter,
+        joinYear: m.joinYear,
+        status: 'active',
+        visibility: 'public',
+        motorcycle: {
+          model: m.motorcycle,
+        },
+        photoURL: m.photo,
+        bio: m.bio,
+        social: {
+          instagram: m.social?.instagram,
+          facebook: m.social?.facebook,
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }));
     }
-
-    // Fallback to static mock data
-    return membersData.map((m) => ({
-      id: m.id,
-      name: m.name,
-      position: m.position,
-      chapter: m.chapter,
-      joinYear: m.joinYear,
-      status: 'active',
-      visibility: 'public',
-      motorcycle: {
-        model: m.motorcycle,
-      },
-      photoURL: m.photo,
-      bio: m.bio,
-      social: {
-        instagram: m.social?.instagram,
-        facebook: m.social?.facebook,
-      },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }));
   },
 
   async getMemberById(id: string): Promise<MemberProfile | null> {
