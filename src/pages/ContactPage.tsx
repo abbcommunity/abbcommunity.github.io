@@ -43,12 +43,12 @@ export const ContactPage: React.FC = () => {
 
     try {
       const cleanPhoto = convertGoogleDriveUrl(formData.photoURL) || formData.photoURL;
-      const combinedMotorcycle = `${formData.motorcycle.trim()} [Plat: ${formData.plateNumber.trim().toUpperCase()}]`;
 
       await memberService.createMember(
         {
           name: formData.name.trim(),
           nik: '', // NIK / Nomor Anggota diisi manual oleh Admin di Backend
+          plateNumber: formData.plateNumber.trim().toUpperCase(),
           email: formData.email.trim(),
           phone: formData.phone.trim(),
           address: formData.address.trim(),
@@ -57,7 +57,7 @@ export const ContactPage: React.FC = () => {
           joinYear: new Date().getFullYear(),
           status: 'active',
           visibility: 'public',
-          motorcycle: { model: combinedMotorcycle },
+          motorcycle: { model: formData.motorcycle.trim() },
           photoURL: cleanPhoto,
           bio: formData.message.trim(),
         },

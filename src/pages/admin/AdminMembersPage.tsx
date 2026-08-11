@@ -101,6 +101,7 @@ export const AdminMembersPage: React.FC = () => {
     phone: '',
     address: '',
     nik: '',
+    plateNumber: '',
     position: 'Anggota',
     chapter: 'Bekasi Chapter',
     status: 'active' as 'active' | 'inactive',
@@ -139,6 +140,7 @@ export const AdminMembersPage: React.FC = () => {
       m.name.toLowerCase().includes(term) ||
       (m.email && m.email.toLowerCase().includes(term)) ||
       (m.nik && m.nik.toLowerCase().includes(term)) ||
+      (m.plateNumber && m.plateNumber.toLowerCase().includes(term)) ||
       (m.chapter && m.chapter.toLowerCase().includes(term)) ||
       (m.position && m.position.toLowerCase().includes(term)) ||
       (m.address && m.address.toLowerCase().includes(term)) ||
@@ -242,6 +244,7 @@ export const AdminMembersPage: React.FC = () => {
       phone: '',
       address: '',
       nik: '',
+      plateNumber: '',
       position: 'Anggota',
       chapter: 'Bekasi Chapter',
       status: 'active',
@@ -276,6 +279,7 @@ export const AdminMembersPage: React.FC = () => {
       phone: cleanString(member.phone),
       address: cleanString(member.address),
       nik: cleanString(member.nik),
+      plateNumber: cleanString(member.plateNumber),
       position: member.position || 'Anggota',
       chapter: member.chapter || 'Bekasi Chapter',
       status: (member.status === 'inactive' ? 'inactive' : 'active'),
@@ -297,6 +301,7 @@ export const AdminMembersPage: React.FC = () => {
         phone: cleanString(formData.phone),
         address: cleanString(formData.address),
         nik: cleanString(formData.nik),
+        plateNumber: cleanString(formData.plateNumber).toUpperCase(),
         position: formData.position || 'Anggota',
         chapter: formData.chapter || 'Bekasi Chapter',
         joinYear: formData.joinYear || 2026,
@@ -1019,7 +1024,12 @@ export const AdminMembersPage: React.FC = () => {
                         </span>
                       )}
                     </td>
-                    <td className="py-3 px-3 font-mono text-emerald-400 text-[11px] font-semibold">{cleanString(m.nik) || '-'}</td>
+                    <td className="py-3 px-3 font-mono text-emerald-400 text-[11px] font-semibold">
+                      <p>{cleanString(m.nik) || '-'}</p>
+                      {m.plateNumber && (
+                        <p className="text-[10px] text-cyan-300 font-sans font-normal uppercase">Plat: {m.plateNumber}</p>
+                      )}
+                    </td>
                     <td className="py-3 px-3 text-[10px] text-gray-500 font-mono">{m.createdAt ? m.createdAt.slice(0, 10) : '-'}</td>
                     <td className="py-3 px-3 font-mono text-blue-300 text-[11px]">{cleanString(m.email) || '-'}</td>
                     <td className="py-3 px-3 text-[11px] font-mono text-gray-400 max-w-[140px] truncate">
@@ -1103,7 +1113,7 @@ export const AdminMembersPage: React.FC = () => {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-gray-300 font-semibold mb-1">NIK / Nomor Anggota (Diisi Manual Admin) *</label>
+                  <label className="block text-gray-300 font-semibold mb-1">NIK / Nomor Anggota (Admin) *</label>
                   <input
                     type="text"
                     required
@@ -1113,6 +1123,18 @@ export const AdminMembersPage: React.FC = () => {
                     className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-red-500 font-mono"
                   />
                 </div>
+                <div>
+                  <label className="block text-gray-300 font-semibold mb-1">Nomor Plat Kendaraan</label>
+                  <input
+                    type="text"
+                    value={formData.plateNumber}
+                    onChange={(e) => setFormData({ ...formData, plateNumber: e.target.value })}
+                    placeholder="Contoh: B 1234 ABC"
+                    className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-red-500 font-mono uppercase"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-gray-300 font-semibold mb-1">Email Address *</label>
                   <input
@@ -1124,17 +1146,17 @@ export const AdminMembersPage: React.FC = () => {
                     className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-red-500"
                   />
                 </div>
-              </div>
-              <div>
-                <label className="block text-gray-300 font-semibold mb-1">No. Telepon / WhatsApp *</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="0812-xxxx-xxxx"
-                  className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-red-500"
-                />
+                <div>
+                  <label className="block text-gray-300 font-semibold mb-1">No. Telepon / WhatsApp *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="0812-xxxx-xxxx"
+                    className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-red-500"
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-gray-300 font-semibold mb-1">Alamat Tempat Tinggal *</label>

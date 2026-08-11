@@ -28,6 +28,7 @@ export interface MemberProfile {
   userId?: string;
   memberNumber?: string;
   nik?: string;
+  plateNumber?: string;
   name: string;
   nickname?: string;
   email?: string;
