@@ -29,7 +29,6 @@ interface OperationState {
 
 /**
  * RFC-4180 compliant CSV line parser with escaped quote ("") support.
- * Handles double quotes in names like Hendro ""Blacky"" without breaking quote toggle.
  */
 const parseCSVLineWithQuotes = (line: string, delimiter: string): string[] => {
   if (delimiter === '\t') {
@@ -46,7 +45,7 @@ const parseCSVLineWithQuotes = (line: string, delimiter: string): string[] => {
     if (char === '"') {
       if (inQuotes && line[i + 1] === '"') {
         current += '"';
-        i++; // Skip the second escaped quote
+        i++; // Skip second escaped quote
       } else {
         inQuotes = !inQuotes;
       }
@@ -226,6 +225,120 @@ export const AdminMembersPage: React.FC = () => {
     }
   };
 
+  /**
+   * Reads Native Excel 2D Array directly (Zero column shifting guaranteed!)
+   */
+  const parseExcelSheetRows = (rows: any[][]) => {
+    if (!rows || rows.length === 0) return;
+
+    const firstRow = (rows[0] || []).map((c) => String(c ?? '').trim().toLowerCase());
+    const isHeaderLine =
+      firstRow.some((h) => h.includes('nama')) ||
+      firstRow.some((h) => h.includes('email')) ||
+      firstRow.some((h) => h.includes('kontak')) ||
+      firstRow.some((h) => h.includes('nik'));
+
+    const startIndex = isHeaderLine ? 1 : 0;
+    const parsed: Partial<MemberProfile>[] = [];
+
+    for (let i = startIndex; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row || row.length === 0) continue;
+
+      let name = '';
+      let email = '';
+      let phone = '';
+      let address = '';
+      let position = 'Anggota';
+      let chapter = 'Bekasi Chapter';
+      let nik = '';
+      let rawPhotoURL = '';
+
+      if (isHeaderLine) {
+        firstRow.forEach((h, colIdx) => {
+          const val = String(row[colIdx] ?? '').trim();
+          if (!val) return;
+
+          if (h === 'nik' || h.startsWith('nik')) {
+            nik = val;
+          } else if ((h.includes('email address') || h === 'email') && val.includes('@')) {
+            email = val;
+          } else if (h.includes('kontak') || h.includes('telp') || h.includes('hp')) {
+            if (val.includes('@')) email = val;
+            else phone = val;
+          } else if (h.includes('nama')) {
+            name = val;
+          } else if (h.includes('alamat')) {
+            address = val;
+          } else if (h.includes('jabatan') || h.includes('chapte')) {
+            if (val.includes('-')) {
+              const parts = val.split('-');
+              position = parts[0].trim();
+              chapter = parts[1].trim();
+            } else {
+              position = val;
+            }
+          } else if (h.includes('foto') || h.includes('profil') || h.includes('drive')) {
+            rawPhotoURL = val;
+          }
+        });
+      } else {
+        name = String(row[0] ?? '').trim();
+        const kontak = String(row[1] ?? '').trim();
+        if (kontak.includes('@')) email = kontak;
+        else phone = kontak;
+
+        address = String(row[2] ?? '').trim();
+        const jabChap = String(row[3] ?? '').trim();
+        if (jabChap.includes('-')) {
+          const parts = jabChap.split('-');
+          position = parts[0].trim();
+          chapter = parts[1].trim();
+        } else if (jabChap) {
+          position = jabChap;
+        }
+
+        nik = String(row[6] ?? '').trim();
+        if (row[8]) email = String(row[8] ?? '').trim();
+        rawPhotoURL = String(row[9] ?? row[4] ?? '').trim();
+      }
+
+      // --- SMART DEEP NIK SEARCH & SANITIZATION ---
+      const isInvalidNik = !nik || nik.match(/kab|bekasi|jabar|kec|kel|rt\.|rw\.|jln|jalan|gg|active|valid|status/i) || nik.includes('.');
+      if (isInvalidNik) {
+        nik = '';
+        for (const cellVal of row) {
+          const strVal = String(cellVal ?? '').trim();
+          if (strVal.match(/^ABB\d{3,}$/i)) {
+            nik = strVal.toUpperCase();
+            break;
+          }
+        }
+      }
+
+      const photoURL = convertGoogleDriveUrl(rawPhotoURL);
+
+      if (name || email || nik) {
+        parsed.push({
+          name: name || 'Anggota ABB',
+          email: email || '',
+          phone: phone || '',
+          address: address || '',
+          nik: nik || '',
+          position: position || 'Anggota',
+          chapter: chapter || 'Bekasi Chapter',
+          joinYear: 2026,
+          photoURL: photoURL || '',
+          status: 'active',
+          visibility: 'public',
+        });
+      }
+    }
+
+    setParsedPreview(parsed);
+    setImportOpState({ status: 'idle', message: '' });
+  };
+
   const parsePastedExcelCSV = (text: string) => {
     setPastedData(text);
     if (!text.trim()) {
@@ -237,7 +350,6 @@ export const AdminMembersPage: React.FC = () => {
     const lines = text.trim().split(/\r?\n/);
     if (lines.length === 0) return;
 
-    // Header analysis
     const headerLine = lines[0];
     const headerCols = parseCSVLineWithQuotes(headerLine, headerLine.includes('\t') ? '\t' : ',').map((h) => h.trim().toLowerCase());
     
@@ -317,7 +429,6 @@ export const AdminMembersPage: React.FC = () => {
       }
 
       // --- SMART DEEP NIK SEARCH & RE-DISAMBIGUATION ---
-      // If NIK is empty or contains address words, search entire row for real NIK pattern (e.g. ABB014, ABB015, or 6-16 digits)
       const isInvalidNik = !nik || nik.match(/kab|bekasi|jabar|kec|kel|rt\.|rw\.|jln|jalan|gg|active|valid|status/i) || nik.includes('.');
       if (isInvalidNik) {
         if (nik && (nik.match(/kab|bekasi|jabar|kec|kel|rt\.|rw\.|jln|jalan|gg/i) || nik.includes('.'))) {
@@ -325,7 +436,6 @@ export const AdminMembersPage: React.FC = () => {
         }
         nik = '';
 
-        // Deep search across all columns for real NIK
         for (const colVal of cols) {
           const cleanedVal = colVal.trim().replace(/^"(.*)"$/, '$1');
           if (cleanedVal.match(/^ABB\d{3,}$/i)) {
@@ -335,7 +445,6 @@ export const AdminMembersPage: React.FC = () => {
         }
       }
 
-      // Email vs NIK Disambiguation
       if (email && !email.includes('@')) {
         if (!nik || nik.match(/active|valid|status/i)) {
           nik = email;
@@ -343,7 +452,6 @@ export const AdminMembersPage: React.FC = () => {
         email = '';
       }
 
-      // Address fragment in Position/Chapter column (e.g. 'Jln Gg Masjid As Salam')
       if (position.match(/RT\.|RW\.|NO\.|Blok|Kel\.|Kec\.|Jl\.|Jalan|Jln|Gg/i) || chapter.match(/RT\.|RW\.|NO\.|Blok|Kel\.|Kec\.|Jl\.|Jalan|Jln|Gg/i)) {
         const addrFragment = `${position} ${chapter}`.trim();
         address = address ? `${address}, ${addrFragment}` : addrFragment;
@@ -398,8 +506,9 @@ export const AdminMembersPage: React.FC = () => {
           const workbook = XLSX.read(data, { type: 'array' });
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
-          const csvText = XLSX.utils.sheet_to_csv(worksheet);
-          parsePastedExcelCSV(csvText);
+          // Use native 2D cell array for 100% exact Excel column parsing
+          const sheetRows = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1 });
+          parseExcelSheetRows(sheetRows);
         } catch (err: any) {
           setImportOpState({
             status: 'error',
