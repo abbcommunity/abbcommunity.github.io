@@ -12,7 +12,7 @@ export const ContactPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
-    nik: '',
+    plateNumber: '',
     email: '',
     phone: '',
     address: '',
@@ -43,10 +43,12 @@ export const ContactPage: React.FC = () => {
 
     try {
       const cleanPhoto = convertGoogleDriveUrl(formData.photoURL) || formData.photoURL;
+      const combinedMotorcycle = `${formData.motorcycle.trim()} [Plat: ${formData.plateNumber.trim().toUpperCase()}]`;
+
       await memberService.createMember(
         {
           name: formData.name.trim(),
-          nik: formData.nik.trim(),
+          nik: '', // NIK / Nomor Anggota diisi manual oleh Admin di Backend
           email: formData.email.trim(),
           phone: formData.phone.trim(),
           address: formData.address.trim(),
@@ -55,7 +57,7 @@ export const ContactPage: React.FC = () => {
           joinYear: new Date().getFullYear(),
           status: 'active',
           visibility: 'public',
-          motorcycle: { model: formData.motorcycle.trim() },
+          motorcycle: { model: combinedMotorcycle },
           photoURL: cleanPhoto,
           bio: formData.message.trim(),
         },
@@ -147,7 +149,7 @@ export const ContactPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right: Full Registration Form (Matches Backend 100%) */}
+        {/* Right: Full Registration Form */}
         <div className="lg:col-span-7">
           <Card className="p-8 space-y-6 border-blue-500/30">
             <div className="flex items-center justify-between border-b border-gray-800 pb-4">
@@ -162,7 +164,7 @@ export const ContactPage: React.FC = () => {
                 <CheckCircle2 className="w-12 h-12 text-blue-400 mx-auto" />
                 <h4 className="text-lg font-bold text-white font-display">Pendaftaran Terkirim & Tersimpan!</h4>
                 <p className="text-xs text-gray-300">
-                  Terima kasih <strong className="text-white">{formData.name}</strong>. Data anggota Anda telah terdaftar di database komunitas ABB. Tim pengurus akan mengkonfirmasi pendaftaran Anda via WhatsApp/Email.
+                  Terima kasih <strong className="text-white">{formData.name}</strong>. Data pendaftaran Anda telah terdaftar di sistem ABB. NIK/Nomor Anggota resmi akan diterbitkan oleh Admin di Backend.
                 </p>
                 <Button variant="outline" size="sm" onClick={() => setSubmitted(false)}>
                   Daftar Anggota Lain
@@ -215,14 +217,14 @@ export const ContactPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-300 mb-1">NIK (Nomor Induk Kependudukan) *</label>
+                    <label className="block text-xs font-semibold text-gray-300 mb-1">Nomor Plat Kendaraan *</label>
                     <input
                       type="text"
                       required
-                      value={formData.nik}
-                      onChange={(e) => setFormData({ ...formData, nik: e.target.value })}
-                      placeholder="Masukkan NIK 16 digit / No. Anggota"
-                      className="w-full bg-[#0B0F17] text-white px-4 py-2.5 rounded-xl border border-gray-700 text-xs focus:border-blue-500 focus:outline-none font-mono"
+                      value={formData.plateNumber}
+                      onChange={(e) => setFormData({ ...formData, plateNumber: e.target.value })}
+                      placeholder="Contoh: B 1234 ABC"
+                      className="w-full bg-[#0B0F17] text-white px-4 py-2.5 rounded-xl border border-gray-700 text-xs focus:border-blue-500 focus:outline-none font-mono uppercase"
                     />
                   </div>
                 </div>

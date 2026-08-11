@@ -1103,13 +1103,13 @@ export const AdminMembersPage: React.FC = () => {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-gray-300 font-semibold mb-1">NIK (Nomor Anggota) *</label>
+                  <label className="block text-gray-300 font-semibold mb-1">NIK / Nomor Anggota (Diisi Manual Admin) *</label>
                   <input
                     type="text"
                     required
                     value={formData.nik}
                     onChange={(e) => setFormData({ ...formData, nik: e.target.value })}
-                    placeholder="Contoh: ABB001 / NIK"
+                    placeholder="Contoh: ABB001 / ABB083"
                     className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-red-500 font-mono"
                   />
                 </div>
