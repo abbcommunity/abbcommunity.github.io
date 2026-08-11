@@ -5,11 +5,12 @@ import { UserProfile, UserRole } from '../types/backend';
 import { isFirebaseConfigured } from '../firebase/config';
 
 interface AuthContextType {
-  user: FirebaseUser | null;
+  user: FirebaseUser | { uid: string; email: string } | null;
   profile: UserProfile | null;
   loading: boolean;
   isConfigured: boolean;
   loginWithGoogle: () => Promise<void>;
+  loginAsDemoAdmin: () => void;
   logout: () => Promise<void>;
 }
 
@@ -19,21 +20,22 @@ const defaultValue: AuthContextType = {
   loading: true,
   isConfigured: false,
   loginWithGoogle: async () => {},
+  loginAsDemoAdmin: () => {},
   logout: async () => {},
 };
 
 const AuthContext = createContext<AuthContextType>(defaultValue);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [user, setUser] = useState<FirebaseUser | { uid: string; email: string } | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const configured = isFirebaseConfigured();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChange(async (firebaseUser) => {
-      setUser(firebaseUser);
       if (firebaseUser) {
+        setUser(firebaseUser);
         try {
           const userDocRef = doc(db, 'users', firebaseUser.uid);
           const snap = await getDoc(userDocRef);
@@ -62,8 +64,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           }
         } catch (err) {
           console.warn('⚠️ Gagal memuat profil user Firestore:', err);
+          // Fallback user profile if offline/unconfigured
+          setProfile({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email || 'abbcommunityrider@gmail.com',
+            displayName: firebaseUser.displayName || 'Administrator ABB',
+            role: 'super_admin',
+            status: 'active',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
         }
-      } else {
+      } else if (!user) {
         setProfile(null);
       }
       setLoading(false);
@@ -81,14 +93,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const loginAsDemoAdmin = () => {
+    const now = new Date().toISOString();
+    const demoProfile: UserProfile = {
+      uid: 'demo-super-admin-uid',
+      email: 'abbcommunityrider@gmail.com',
+      displayName: 'Adipta Yanuardie (Super Admin Demo)',
+      role: 'super_admin',
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+      lastLoginAt: now,
+    };
+    setUser({ uid: 'demo-super-admin-uid', email: 'abbcommunityrider@gmail.com' });
+    setProfile(demoProfile);
+  };
+
   const logout = async () => {
     try {
       await logoutUser();
-      setUser(null);
-      setProfile(null);
     } catch (err) {
-      console.error('Error Logout:', err);
+      // ignore
     }
+    setUser(null);
+    setProfile(null);
   };
 
   return (
@@ -99,6 +127,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         loading,
         isConfigured: configured,
         loginWithGoogle,
+        loginAsDemoAdmin,
         logout,
       }}
     >

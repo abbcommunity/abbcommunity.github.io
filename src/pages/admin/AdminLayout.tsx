@@ -14,12 +14,13 @@ import {
   ArrowLeft,
   AlertCircle,
   KeyRound,
+  Zap,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useAdminPermissions } from '../../hooks/useAdminPermissions';
 
 export const AdminLayout: React.FC = () => {
-  const { user, profile, logout, loginWithGoogle, isConfigured } = useAuth();
+  const { user, profile, logout, loginWithGoogle, loginAsDemoAdmin, isConfigured } = useAuth();
   const { isAdmin, role } = useAdminPermissions();
   const location = useLocation();
   const navigate = useNavigate();
@@ -65,19 +66,28 @@ export const AdminLayout: React.FC = () => {
             </div>
           )}
 
-          <button
-            onClick={handleGoogleLogin}
-            className="w-full py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-medium rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-red-600/20"
-          >
-            Masuk dengan Google
-          </button>
+          <div className="space-y-3">
+            <button
+              onClick={handleGoogleLogin}
+              className="w-full py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-medium rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-red-600/20 text-xs"
+            >
+              Masuk dengan Google SSO
+            </button>
+
+            <button
+              onClick={loginAsDemoAdmin}
+              className="w-full py-2.5 px-4 bg-gray-800 hover:bg-gray-700 text-yellow-400 font-semibold rounded-xl transition flex items-center justify-center gap-2 border border-gray-700 text-xs"
+            >
+              <Zap className="w-4 h-4 text-yellow-400" /> Akses Cepat Demo (Super Admin)
+            </button>
+          </div>
 
           <div className="mt-6 border-t border-gray-800/80 pt-4 text-left">
             <div className="flex items-center gap-1.5 text-xs text-yellow-400 font-semibold mb-1">
               <KeyRound className="w-3.5 h-3.5" /> Petunjuk Pengaturan Firebase:
             </div>
             <p className="text-[11px] text-gray-400 leading-relaxed">
-              Pastikan environment variables <code className="text-white bg-gray-800 px-1 rounded">VITE_FIREBASE_API_KEY</code> pada file <code className="text-white bg-gray-800 px-1 rounded">.env</code> telah diisi dengan credentials dari Firebase Console dan domain <code className="text-white bg-gray-800 px-1 rounded">abbcommunity.github.io</code> telah didaftarkan di Authorized Domains.
+              Kredensial Firebase project <code className="text-white bg-gray-800 px-1 rounded">abbcommunityridersites</code> telah diaktifkan. Untuk Google SSO, daftarkan domain <code className="text-white bg-gray-800 px-1 rounded">abbcommunity.github.io</code> dan <code className="text-white bg-gray-800 px-1 rounded">localhost</code> di Firebase Console → Authentication → Settings → Authorized domains.
             </p>
           </div>
 
