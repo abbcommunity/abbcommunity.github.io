@@ -12,6 +12,7 @@ import {
   Download,
   Pencil,
   ExternalLink,
+  Filter,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useMembers } from '../../hooks/useMembers';
@@ -73,6 +74,8 @@ export const AdminMembersPage: React.FC = () => {
   const { members, loading, refetch } = useMembers(true);
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedPosition, setSelectedPosition] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -111,13 +114,50 @@ export const AdminMembersPage: React.FC = () => {
   const [pastedData, setPastedData] = useState('');
   const [parsedPreview, setParsedPreview] = useState<Partial<MemberProfile>[]>([]);
 
-  const filteredMembers = members.filter((m) =>
-    m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    m.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    m.nik?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    m.chapter?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    m.position?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Dynamically extract all available unique positions from current database
+  const availablePositions = Array.from(
+    new Set([
+      'Ketua Umum',
+      'Wakil Ketua Umum',
+      'Sekretaris Umum',
+      'Bendahara Umum',
+      'Koordinator Region & Founder',
+      'ABB Creative Squad & Founder',
+      'Lead Digital & IT Architect',
+      'Tim Kesehatan & Rescue',
+      'Anggota Divisi Touring',
+      'Anggota',
+      ...members.map((m) => m.position?.trim()).filter((p): p is string => Boolean(p)),
+    ])
+  ).sort();
+
+  const filteredMembers = members.filter((m) => {
+    // 1. Search term match
+    const term = searchTerm.toLowerCase().trim();
+    const matchesSearch =
+      !term ||
+      m.name.toLowerCase().includes(term) ||
+      (m.email && m.email.toLowerCase().includes(term)) ||
+      (m.nik && m.nik.toLowerCase().includes(term)) ||
+      (m.chapter && m.chapter.toLowerCase().includes(term)) ||
+      (m.position && m.position.toLowerCase().includes(term)) ||
+      (m.address && m.address.toLowerCase().includes(term)) ||
+      (m.phone && m.phone.toLowerCase().includes(term));
+
+    // 2. Position filter match
+    const matchesPosition =
+      selectedPosition === 'all' ||
+      (m.position && m.position.trim().toLowerCase() === selectedPosition.trim().toLowerCase());
+
+    // 3. Status filter match
+    const mStatus = m.status ? m.status.toLowerCase() : 'active';
+    const matchesStatus =
+      selectedStatus === 'all' ||
+      (selectedStatus === 'active' && (mStatus === 'active' || mStatus === 'aktif')) ||
+      (selectedStatus === 'inactive' && (mStatus === 'inactive' || mStatus === 'non active' || mStatus === 'non-active' || mStatus === 'nonaktif'));
+
+    return matchesSearch && matchesPosition && matchesStatus;
+  });
 
   const isAllSelected =
     filteredMembers.length > 0 && filteredMembers.every((m) => selectedIds.includes(m.id));
@@ -801,16 +841,61 @@ export const AdminMembersPage: React.FC = () => {
       )}
 
       {/* Filter, Search & Bulk Delete Toolbar */}
-      <div className="bg-[#101622] border border-gray-800 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="relative w-full sm:w-96 flex items-center gap-3">
-          <Search className="w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Cari anggota berdasarkan nama, NIK, email, jabatan, atau chapter..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-transparent text-xs text-white placeholder-gray-500 focus:outline-none"
-          />
+      <div className="bg-[#101622] border border-gray-800 rounded-2xl p-4 flex flex-col lg:flex-row items-center justify-between gap-3">
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto flex-1">
+          {/* Search Box */}
+          <div className="relative w-full sm:w-80 flex items-center gap-2 bg-[#0C111A] border border-gray-800 rounded-xl px-3 py-2">
+            <Search className="w-4 h-4 text-gray-400 shrink-0" />
+            <input
+              type="text"
+              placeholder="Cari nama, NIK, email, jabatan..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-transparent text-xs text-white placeholder-gray-500 focus:outline-none"
+            />
+            {searchTerm && (
+              <button onClick={() => setSearchTerm('')} className="text-gray-500 hover:text-white text-xs">
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Filter Jabatan Dropdown */}
+          <div className="relative w-full sm:w-56 flex items-center gap-2 bg-[#0C111A] border border-gray-800 rounded-xl px-3 py-2">
+            <Filter className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+            <select
+              value={selectedPosition}
+              onChange={(e) => setSelectedPosition(e.target.value)}
+              className="w-full bg-transparent text-xs text-white focus:outline-none cursor-pointer font-sans"
+            >
+              <option value="all" className="bg-[#121824] text-gray-300">Semua Jabatan ({members.length})</option>
+              {availablePositions.map((pos) => {
+                const count = members.filter((m) => m.position?.trim().toLowerCase() === pos.trim().toLowerCase()).length;
+                return (
+                  <option key={pos} value={pos} className="bg-[#121824] text-white">
+                    {pos} {count > 0 ? `(${count})` : ''}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
+          {/* Filter Status Dropdown */}
+          <div className="relative w-full sm:w-44 flex items-center gap-2 bg-[#0C111A] border border-gray-800 rounded-xl px-3 py-2">
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="w-full bg-transparent text-xs text-white focus:outline-none cursor-pointer font-sans"
+            >
+              <option value="all" className="bg-[#121824] text-gray-300">Semua Status</option>
+              <option value="active" className="bg-[#121824] text-emerald-400 font-bold">
+                🟢 Active ({members.filter((m) => !m.status || m.status === 'active').length})
+              </option>
+              <option value="inactive" className="bg-[#121824] text-red-400 font-bold">
+                🔴 Non Active ({members.filter((m) => m.status === 'inactive').length})
+              </option>
+            </select>
+          </div>
         </div>
 
         {/* Bulk Action Controls */}
