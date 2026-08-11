@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -12,15 +12,36 @@ import {
   ChevronRight,
   ShieldAlert,
   ArrowLeft,
+  AlertCircle,
+  KeyRound,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useAdminPermissions } from '../../hooks/useAdminPermissions';
 
 export const AdminLayout: React.FC = () => {
-  const { user, profile, logout, loginWithGoogle } = useAuth();
+  const { user, profile, logout, loginWithGoogle, isConfigured } = useAuth();
   const { isAdmin, role } = useAdminPermissions();
   const location = useLocation();
   const navigate = useNavigate();
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  const handleGoogleLogin = async () => {
+    setAuthError(null);
+    try {
+      await loginWithGoogle();
+    } catch (err: any) {
+      console.error('Google Auth Error:', err);
+      let msg = err.message || 'Gagal autentikasi Google.';
+      if (err.code === 'auth/invalid-api-key' || err.code === 'auth/api-key-not-valid') {
+        msg = 'Kunci VITE_FIREBASE_API_KEY di .env belum diisi dengan API Key asli dari Firebase Console.';
+      } else if (err.code === 'auth/unauthorized-domain') {
+        msg = 'Domain ini belum ditambahkan ke "Authorized Domains" di Firebase Console -> Authentication -> Settings.';
+      } else if (err.code === 'auth/popup-closed-by-user') {
+        msg = 'Jendela login Google ditutup sebelum selesai.';
+      }
+      setAuthError(msg);
+    }
+  };
 
   if (!user || !profile) {
     return (
@@ -33,12 +54,33 @@ export const AdminLayout: React.FC = () => {
           <p className="text-gray-400 text-sm mb-6">
             Silakan masuk dengan akun pengurus / administrator yang terverifikasi untuk mengakses dashboard operasional.
           </p>
+
+          {authError && (
+            <div className="mb-4 p-3 bg-red-950/60 border border-red-800/60 rounded-xl text-left text-xs text-red-300 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-red-200">Gagal Login Firebase Auth:</p>
+                <p className="mt-1">{authError}</p>
+              </div>
+            </div>
+          )}
+
           <button
-            onClick={loginWithGoogle}
+            onClick={handleGoogleLogin}
             className="w-full py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-medium rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-red-600/20"
           >
             Masuk dengan Google
           </button>
+
+          <div className="mt-6 border-t border-gray-800/80 pt-4 text-left">
+            <div className="flex items-center gap-1.5 text-xs text-yellow-400 font-semibold mb-1">
+              <KeyRound className="w-3.5 h-3.5" /> Petunjuk Pengaturan Firebase:
+            </div>
+            <p className="text-[11px] text-gray-400 leading-relaxed">
+              Pastikan environment variables <code className="text-white bg-gray-800 px-1 rounded">VITE_FIREBASE_API_KEY</code> pada file <code className="text-white bg-gray-800 px-1 rounded">.env</code> telah diisi dengan credentials dari Firebase Console dan domain <code className="text-white bg-gray-800 px-1 rounded">abbcommunity.github.io</code> telah didaftarkan di Authorized Domains.
+            </p>
+          </div>
+
           <div className="mt-4">
             <Link to="/" className="text-xs text-gray-500 hover:text-gray-300 flex items-center justify-center gap-1">
               <ArrowLeft className="w-3 h-3" /> Kembali ke Situs Publik
