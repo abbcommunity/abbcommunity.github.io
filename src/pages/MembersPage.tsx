@@ -3,7 +3,6 @@ import { Badge } from '../components/ui/Badge';
 import { Card } from '../components/ui/Card';
 import { Modal } from '../components/ui/Modal';
 import { useMembers } from '../hooks/useMembers';
-import { membersData } from '../data/members';
 import { Search, IdCard, UserCheck, ShieldCheck, Loader2 } from 'lucide-react';
 import { getAvatarUrl, handleAvatarError } from '../utils/imageUtils';
 
@@ -23,24 +22,8 @@ export const MembersPage: React.FC = () => {
     return val.trim().replace(/^['"]+/, '').replace(/['"]+$/, '').replace(/^'/, '');
   };
 
-  // Combine Firestore dynamic members and static members fallback
-  const rawList = firestoreMembers.length > 0
-    ? firestoreMembers
-    : membersData.map((m, idx) => ({
-        id: m.id,
-        name: m.name,
-        nik: m.nik || `ABB${String(idx + 1).padStart(3, '0')}`,
-        position: m.position,
-        chapter: m.chapter,
-        joinYear: m.joinYear,
-        status: 'active' as const,
-        visibility: 'public' as const,
-        motorcycle: { model: m.motorcycle },
-        photoURL: m.photo,
-        bio: m.bio,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }));
+  // Filter active members from real database
+  const activeMembers = firestoreMembers.filter((m) => m.status !== 'inactive');
 
   const extractNikNumber = (nikStr?: string | null): number => {
     if (!nikStr) return 999999;
@@ -49,7 +32,7 @@ export const MembersPage: React.FC = () => {
     return match ? parseInt(match[0], 10) : 999999;
   };
 
-  const displayMembersList = rawList
+  const displayMembersList = activeMembers
     .map((m) => ({
       id: m.id,
       name: cleanString(m.name) || 'Anggota ABB',
