@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
 import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
@@ -28,6 +28,19 @@ import { AdminStoriesPage } from './pages/admin/AdminStoriesPage';
 import { AdminDocumentsPage } from './pages/admin/AdminDocumentsPage';
 import { AdminAuditLogsPage } from './pages/admin/AdminAuditLogsPage';
 
+// Public Layout Wrapper
+const PublicLayout: React.FC<{ onOpenSearch: () => void }> = ({ onOpenSearch }) => {
+  return (
+    <div className="min-h-screen flex flex-col bg-[#0B0F17] text-gray-100 font-sans selection:bg-blue-600 selection:text-white">
+      <Navbar onOpenSearch={onOpenSearch} />
+      <main className="flex-1">
+        <Outlet />
+      </main>
+      <Footer />
+    </div>
+  );
+};
+
 export const App: React.FC = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
@@ -47,7 +60,7 @@ export const App: React.FC = () => {
     <AuthProvider>
       <Router>
         <Routes>
-          {/* Admin Portal Layout & Sub-routes */}
+          {/* Admin Engine Portal Routes */}
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboardPage />} />
             <Route path="members" element={<AdminMembersPage />} />
@@ -57,42 +70,29 @@ export const App: React.FC = () => {
             <Route path="audit-logs" element={<AdminAuditLogsPage />} />
           </Route>
 
-          {/* Public Platform Layout */}
-          <Route
-            path="*"
-            element={
-              <div className="min-h-screen flex flex-col bg-[#0B0F17] text-gray-100 font-sans selection:bg-blue-600 selection:text-white">
-                <Navbar onOpenSearch={() => setIsSearchOpen(true)} />
-
-                <main className="flex-1">
-                  <Routes>
-                    <Route path="/" element={<HomePage />} />
-                    <Route path="/about" element={<AboutPage />} />
-                    <Route path="/members" element={<MembersPage />} />
-                    <Route path="/events" element={<EventsPage />} />
-                    <Route path="/stories" element={<StoriesPage />} />
-                    <Route path="/stories/:slug" element={<StoryDetailPage />} />
-                    <Route path="/gallery" element={<GalleryPage />} />
-                    <Route path="/garage" element={<GaragePage />} />
-                    <Route path="/rides" element={<RidesPage />} />
-                    <Route path="/social-impact" element={<SocialImpactPage />} />
-                    <Route path="/documents" element={<DocumentsPage />} />
-                    <Route path="/contact" element={<ContactPage />} />
-                    <Route path="*" element={<NotFoundPage />} />
-                  </Routes>
-                </main>
-
-                <Footer />
-
-                {/* Global Fuzzy Search Modal */}
-                <GlobalSearchModal
-                  isOpen={isSearchOpen}
-                  onClose={() => setIsSearchOpen(false)}
-                />
-              </div>
-            }
-          />
+          {/* Public Platform Routes */}
+          <Route element={<PublicLayout onOpenSearch={() => setIsSearchOpen(true)} />}>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/members" element={<MembersPage />} />
+            <Route path="/events" element={<EventsPage />} />
+            <Route path="/stories" element={<StoriesPage />} />
+            <Route path="/stories/:slug" element={<StoryDetailPage />} />
+            <Route path="/gallery" element={<GalleryPage />} />
+            <Route path="/garage" element={<GaragePage />} />
+            <Route path="/rides" element={<RidesPage />} />
+            <Route path="/social-impact" element={<SocialImpactPage />} />
+            <Route path="/documents" element={<DocumentsPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
         </Routes>
+
+        {/* Global Fuzzy Search Modal */}
+        <GlobalSearchModal
+          isOpen={isSearchOpen}
+          onClose={() => setIsSearchOpen(false)}
+        />
       </Router>
     </AuthProvider>
   );
