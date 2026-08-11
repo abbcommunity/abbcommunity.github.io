@@ -19,6 +19,20 @@ import { auditLogService } from './auditLogService';
 
 const COLLECTION_NAME = 'members';
 
+/**
+ * Sanitizes object by removing any properties that have undefined values.
+ * Firestore throws an error if undefined values are passed in writeBatch.set() or setDoc().
+ */
+const sanitizeForFirestore = <T extends Record<string, any>>(obj: T): T => {
+  const cleaned: Record<string, any> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      cleaned[key] = value;
+    }
+  }
+  return cleaned as T;
+};
+
 export const memberService = {
   async getAllMembers(includeMembersOnly = false): Promise<MemberProfile[]> {
     try {
@@ -99,7 +113,7 @@ export const memberService = {
       createdAt: now,
       updatedAt: now,
     };
-    await setDoc(newRef, data);
+    await setDoc(newRef, sanitizeForFirestore(data));
     await auditLogService.logAction(actorId, 'MEMBER_CREATED', 'members', newRef.id, { name: member.name });
     return newRef.id;
   },
@@ -109,48 +123,84 @@ export const memberService = {
     actorId: string
   ): Promise<number> {
     const now = new Date().toISOString();
-    const batch = writeBatch(db);
-    let count = 0;
+    let totalImported = 0;
 
-    for (const item of items) {
-      const newRef = doc(collection(db, COLLECTION_NAME));
-      const data: MemberProfile = {
-        ...item,
-        id: newRef.id,
-        createdAt: now,
-        updatedAt: now,
-      };
-      batch.set(newRef, data);
-      count++;
+    // Process in batches of 400 (Firestore max limit per batch is 500)
+    const chunkSize = 400;
+
+    for (let i = 0; i < items.length; i += chunkSize) {
+      const chunk = items.slice(i, i + chunkSize);
+      const batch = writeBatch(db);
+
+      for (const item of chunk) {
+        const newRef = doc(collection(db, COLLECTION_NAME));
+        const rawData: Record<string, any> = {
+          name: item.name || 'Anggota ABB',
+          email: item.email || '',
+          phone: item.phone || '',
+          address: item.address || '',
+          nik: item.nik || '',
+          position: item.position || 'Anggota',
+          chapter: item.chapter || 'Bekasi Chapter',
+          joinYear: item.joinYear || 2026,
+          status: item.status || 'active',
+          visibility: item.visibility || 'public',
+          id: newRef.id,
+          createdAt: now,
+          updatedAt: now,
+        };
+
+        if (item.photoURL) {
+          rawData.photoURL = item.photoURL;
+        }
+
+        batch.set(newRef, sanitizeForFirestore(rawData));
+        totalImported++;
+      }
+
+      await batch.commit();
     }
 
-    await batch.commit();
-    await auditLogService.logAction(actorId, 'BULK_MEMBERS_IMPORTED', 'members', 'batch', { count });
-    return count;
+    await auditLogService.logAction(actorId, 'BULK_MEMBERS_IMPORTED', 'members', 'batch', { count: totalImported });
+    return totalImported;
   },
 
   async bulkDeleteMembers(ids: string[], actorId: string): Promise<number> {
-    const batch = writeBatch(db);
-    let count = 0;
+    if (!ids || ids.length === 0) return 0;
+    
+    // Process in chunks of 400
+    const chunkSize = 400;
+    let totalDeleted = 0;
 
-    for (const id of ids) {
-      const ref = doc(db, COLLECTION_NAME, id);
-      batch.delete(ref);
-      count++;
+    for (let i = 0; i < ids.length; i += chunkSize) {
+      const chunk = ids.slice(i, i + chunkSize);
+      const batch = writeBatch(db);
+
+      for (const id of chunk) {
+        const ref = doc(db, COLLECTION_NAME, id);
+        batch.delete(ref);
+      }
+
+      await batch.commit();
+      totalDeleted += chunk.length;
     }
 
-    await batch.commit();
-    await auditLogService.logAction(actorId, 'BULK_MEMBERS_DELETED', 'members', 'batch', { count, deletedIds: ids });
-    return count;
+    try {
+      await auditLogService.logAction(actorId, 'BULK_MEMBERS_DELETED', 'members', 'batch', { count: totalDeleted, deletedIds: ids });
+    } catch (err) {
+      console.warn('Audit log notice during bulk delete:', err);
+    }
+
+    return totalDeleted;
   },
 
   async updateMember(id: string, updates: Partial<MemberProfile>, actorId: string): Promise<void> {
     const docRef = doc(db, COLLECTION_NAME, id);
     const now = new Date().toISOString();
-    await updateDoc(docRef, {
+    await updateDoc(docRef, sanitizeForFirestore({
       ...updates,
       updatedAt: now,
-    });
+    }));
     await auditLogService.logAction(actorId, 'MEMBER_UPDATED', 'members', id, updates);
   },
 

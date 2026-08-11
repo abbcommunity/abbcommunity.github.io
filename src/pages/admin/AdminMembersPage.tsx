@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Plus, Search, Trash2, FileSpreadsheet, Upload, CheckCircle, Download, CheckSquare, Square } from 'lucide-react';
+import { Users, Plus, Search, Trash2, FileSpreadsheet, Upload, CheckCircle, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useMembers } from '../../hooks/useMembers';
 import { memberService } from '../../services/memberService';
@@ -76,7 +76,7 @@ export const AdminMembersPage: React.FC = () => {
       setSelectedIds([]);
       refetch();
     } catch (err: any) {
-      alert(`Gagal menghapus data massal: ${err.message}`);
+      alert(`Gagal menghapus data massal: ${err.message || err}`);
     } finally {
       setIsDeletingBulk(false);
     }
@@ -89,18 +89,18 @@ export const AdminMembersPage: React.FC = () => {
       await memberService.createMember(
         {
           name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          address: formData.address,
-          nik: formData.nik,
-          position: formData.position,
-          chapter: formData.chapter,
-          joinYear: formData.joinYear,
+          email: formData.email || '',
+          phone: formData.phone || '',
+          address: formData.address || '',
+          nik: formData.nik || '',
+          position: formData.position || 'Anggota',
+          chapter: formData.chapter || 'Bekasi Chapter',
+          joinYear: formData.joinYear || 2026,
           status: 'active',
           visibility: 'public',
           motorcycle: { model: formData.motorcycleModel },
-          bio: formData.bio,
-          photoURL: convertGoogleDriveUrl(formData.photoURL) || undefined,
+          bio: formData.bio || '',
+          photoURL: convertGoogleDriveUrl(formData.photoURL) || '',
         },
         user.uid
       );
@@ -119,8 +119,8 @@ export const AdminMembersPage: React.FC = () => {
         photoURL: '',
       });
       refetch();
-    } catch (err) {
-      alert('Gagal menambah anggota.');
+    } catch (err: any) {
+      alert('Gagal menambah anggota: ' + (err.message || err));
     }
   };
 
@@ -212,14 +212,14 @@ export const AdminMembersPage: React.FC = () => {
       if (name || email || nik) {
         parsed.push({
           name: name || 'Anggota ABB',
-          email,
-          phone,
-          address,
-          nik,
+          email: email || '',
+          phone: phone || '',
+          address: address || '',
+          nik: nik || '',
           position: position || 'Anggota',
           chapter: chapter || 'Bekasi Chapter',
           joinYear: 2026,
-          photoURL: photoURL || undefined,
+          photoURL: photoURL || '',
           status: 'active',
           visibility: 'public',
         });
@@ -277,7 +277,7 @@ export const AdminMembersPage: React.FC = () => {
         position: item.position || 'Anggota',
         chapter: item.chapter || 'Bekasi Chapter',
         joinYear: item.joinYear || 2026,
-        photoURL: item.photoURL || undefined,
+        photoURL: item.photoURL || '',
         status: 'active' as const,
         visibility: 'public' as const,
       }));
@@ -292,7 +292,7 @@ export const AdminMembersPage: React.FC = () => {
         refetch();
       }, 1200);
     } catch (err: any) {
-      setImportStatus(`Gagal import: ${err.message}`);
+      setImportStatus(`Gagal import: ${err.message || err}`);
     }
   };
 
@@ -687,8 +687,12 @@ export const AdminMembersPage: React.FC = () => {
               )}
 
               {importStatus && (
-                <div className="p-3 bg-emerald-950/80 border border-emerald-800 rounded-xl text-emerald-300 text-xs font-semibold flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                <div className={`p-3 border rounded-xl text-xs font-semibold flex items-center gap-2 ${
+                  importStatus.startsWith('Gagal')
+                    ? 'bg-red-950/80 border-red-800 text-red-300'
+                    : 'bg-emerald-950/80 border-emerald-800 text-emerald-300'
+                }`}>
+                  <CheckCircle className={`w-4 h-4 shrink-0 ${importStatus.startsWith('Gagal') ? 'text-red-400' : 'text-emerald-400'}`} />
                   {importStatus}
                 </div>
               )}
