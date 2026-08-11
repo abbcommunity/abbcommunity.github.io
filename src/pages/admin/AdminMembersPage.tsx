@@ -13,6 +13,7 @@ import {
   Pencil,
   ExternalLink,
   Filter,
+  MessageCircle,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useMembers } from '../../hooks/useMembers';
@@ -68,6 +69,17 @@ const parseCSVLineWithQuotes = (line: string, delimiter: string): string[] => {
   }
   result.push(cleanString(current).replace(/""/g, '"'));
   return result;
+};
+
+const getWaLink = (phone?: string, name?: string) => {
+  if (!phone) return null;
+  let cleaned = phone.replace(/[^0-9]/g, '');
+  if (cleaned.startsWith('0')) {
+    cleaned = '62' + cleaned.slice(1);
+  }
+  if (!cleaned || cleaned.length < 6) return null;
+  const msg = encodeURIComponent(`Halo Bro ${name || ''}, salam persaudaraan dari Pengurus ABB Community!`);
+  return `https://wa.me/${cleaned}?text=${msg}`;
 };
 
 export const AdminMembersPage: React.FC = () => {
@@ -1034,6 +1046,21 @@ export const AdminMembersPage: React.FC = () => {
                     </td>
                     <td className="py-3 px-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">
+                        {getWaLink(m.phone, m.name) ? (
+                          <a
+                            href={getWaLink(m.phone, m.name)!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/40 rounded-lg transition"
+                            title={`Hubungi ${cleanString(m.name)} via WhatsApp (${m.phone})`}
+                          >
+                            <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
+                          </a>
+                        ) : (
+                          <span className="p-1.5 text-gray-600 opacity-40 cursor-not-allowed" title="Nomor telepon/WhatsApp tidak valid">
+                            <MessageCircle className="w-3.5 h-3.5" />
+                          </span>
+                        )}
                         <button
                           onClick={() => handleOpenEditModal(m)}
                           className="p-1.5 text-blue-400 hover:text-blue-300 hover:bg-blue-950/40 rounded-lg transition"
