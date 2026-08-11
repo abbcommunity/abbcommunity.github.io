@@ -787,6 +787,32 @@ export const AdminMembersPage: React.FC = () => {
     document.body.removeChild(link);
   };
 
+  const handleExportExcel = () => {
+    try {
+      const exportData = members.map((m) => ({
+        'NO NIK / ANGGOTA': m.nik || '',
+        'NAMA ANGGOTA': m.name || '',
+        JABATAN: m.position || '',
+        CHAPTER: m.chapter || '',
+        'TAHUN BERGABUNG': m.joinYear || '',
+        EMAIL: m.email || '',
+        TELEPON: m.phone || '',
+        ALAMAT: m.address || '',
+        STATUS: m.status || 'active',
+        'NOMOR PLAT KENDARAAN': m.plateNumber || '',
+        'FOTO PROFIL': m.photoURL || '',
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Anggota ABB');
+      XLSX.writeFile(workbook, `Data_Anggota_ABB_${new Date().toISOString().split('T')[0]}.xlsx`);
+    } catch (err) {
+      console.error('Failed to export Excel:', err);
+      alert('Gagal mengekspor data ke Excel.');
+    }
+  };
+
   const handleCloseImportModal = () => {
     setIsImportModalOpen(false);
     setPastedData('');
@@ -808,6 +834,13 @@ export const AdminMembersPage: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportExcel}
+            className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl transition flex items-center gap-2 shadow-lg shadow-blue-600/20"
+            title="Ekspor seluruh data anggota saat ini ke file Excel (.xlsx)"
+          >
+            <Download className="w-4 h-4" /> Export Excel (.xlsx)
+          </button>
           <button
             onClick={() => setIsImportModalOpen(true)}
             className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl transition flex items-center gap-2 shadow-lg shadow-emerald-600/20"
