@@ -58,7 +58,7 @@ export const memberService = {
     let firestoreDocs: MemberProfile[] = [];
     try {
       const colRef = collection(db, COLLECTION_NAME);
-      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500));
+      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 4500));
       const snap = await Promise.race([getDocs(colRef), timeoutPromise]).catch(() => null);
       if (snap && typeof snap === 'object' && 'docs' in snap && snap.docs && snap.docs.length > 0) {
         firestoreDocs = snap.docs.map((d) => d.data() as MemberProfile);
@@ -81,6 +81,20 @@ export const memberService = {
         }
       }
     });
+
+    // Auto-sync local members to Cloud Firestore in background if missing from Firestore
+    if (localDocs.length > 0) {
+      setTimeout(() => {
+        localDocs.forEach(async (ldoc) => {
+          if (ldoc && ldoc.id) {
+            try {
+              const docRef = doc(db, COLLECTION_NAME, ldoc.id);
+              await setDoc(docRef, sanitizeForFirestore(ldoc), { merge: true });
+            } catch (e) {}
+          }
+        });
+      }, 500);
+    }
 
     let combined: MemberProfile[] = Array.from(finalNikMap.values());
 
@@ -178,7 +192,7 @@ export const memberService = {
       })
       .catch(() => null);
 
-    const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 1000));
+    const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 3500));
     await Promise.race([firestoreSync, timeoutPromise]);
 
     return newRef.id;
@@ -364,7 +378,7 @@ export const memberService = {
       })
       .catch(() => null);
 
-    const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 1000));
+    const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 3500));
     await Promise.race([firestoreSync, timeoutPromise]);
   },
 
