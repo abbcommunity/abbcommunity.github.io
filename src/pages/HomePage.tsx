@@ -95,7 +95,7 @@ export const HomePage: React.FC = () => {
                 Lebih Dari Sekadar Klub Motor. Sebuah Keluarga Digital.
               </h2>
               <p className="text-gray-300 leading-relaxed text-sm sm:text-base">
-                ABB Community (Awal Bros Bikers Community) berdiri sejak 2010 sebagai wadah bagi karyawan, manajemen, dan praktisi di lingkungan rumah sakit serta rekan sejawat pecinta otomotif untuk menjalin persaudaraan dan memberikan dampak nyata.
+                ABB Community (Adventurer Born in Bekasi Community) berdiri sejak 2010 sebagai wadah bagi para penggiat adventure riding dan komunikasi otomotif profesional untuk menjalin persaudaraan dan memberikan dampak nyata.
               </p>
               <div className="grid grid-cols-2 gap-4 text-xs font-semibold text-gray-300">
                 <div className="flex items-center gap-2 p-3 bg-gray-900/60 rounded-lg border border-gray-800">

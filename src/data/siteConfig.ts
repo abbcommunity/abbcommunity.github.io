@@ -1,6 +1,6 @@
 export const siteConfig = {
   name: "ABB COMMUNITY",
-  fullName: "Awal Bros Bikers Community",
+  fullName: "Adventurer Born in Bekasi Community",
   tagline: "Ride Together. Serve Together.",
   description: "Official Digital Home for ABB Community — Modern Digital Community Platform uniting automotive passion, brotherhood, and humanitarian impact across Indonesia.",
   establishedYear: 2010,

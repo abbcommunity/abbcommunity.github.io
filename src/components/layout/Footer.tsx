@@ -24,7 +24,7 @@ export const Footer: React.FC = () => {
                   ABB <span className="text-blue-500">COMMUNITY</span>
                 </span>
                 <span className="text-xs tracking-widest text-gray-400 uppercase block mt-1">
-                  Awal Bros Bikers Community
+                  Adventurer Born in Bekasi Community
                 </span>
               </div>
             </Link>

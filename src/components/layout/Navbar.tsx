@@ -75,7 +75,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch }) => {
                 ABB <span className="text-blue-500">COMMUNITY</span>
               </span>
               <span className="text-[10px] tracking-widest text-gray-400 font-medium uppercase block mt-0.5">
-                Awal Bros Bikers
+                Adventurer Born in Bekasi
               </span>
             </div>
           </Link>
