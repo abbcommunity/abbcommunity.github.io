@@ -17,7 +17,7 @@ import { useMembers } from '../../hooks/useMembers';
 import { memberService } from '../../services/memberService';
 import { useAuth } from '../../hooks/useAuth';
 import { MemberProfile } from '../../types/backend';
-import { convertGoogleDriveUrl, getAvatarUrl } from '../../utils/imageUtils';
+import { convertGoogleDriveUrl, getAvatarUrl, handleAvatarError } from '../../utils/imageUtils';
 
 interface OperationState {
   status: 'idle' | 'loading' | 'success' | 'error';
@@ -798,6 +798,7 @@ export const AdminMembersPage: React.FC = () => {
                       <img
                         src={getAvatarUrl(m.photoURL, m.name)}
                         alt={m.name}
+                        onError={(e) => handleAvatarError(e, m.photoURL, m.name)}
                         className="w-8 h-8 rounded-full object-cover border border-gray-700 bg-gray-800 shrink-0"
                       />
                       <div>
@@ -1049,6 +1050,7 @@ export const AdminMembersPage: React.FC = () => {
                               <img
                                 src={getAvatarUrl(row.photoURL, row.name)}
                                 alt={row.name}
+                                onError={(e) => handleAvatarError(e, row.photoURL, row.name)}
                                 className="w-5 h-5 rounded-full object-cover border border-gray-700 bg-gray-800 shrink-0"
                               />
                               <span>{row.name}</span>

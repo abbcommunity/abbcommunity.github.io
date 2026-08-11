@@ -5,7 +5,7 @@ import { Modal } from '../components/ui/Modal';
 import { membersData } from '../data/members';
 import { Member } from '../types';
 import { Search, MapPin, Bike, Calendar, Instagram, Mail } from 'lucide-react';
-import { getAvatarUrl } from '../utils/imageUtils';
+import { getAvatarUrl, handleAvatarError } from '../utils/imageUtils';
 
 export const MembersPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -87,6 +87,7 @@ export const MembersPage: React.FC = () => {
             <img
               src={getAvatarUrl(m.photo, m.name)}
               alt={m.name}
+              onError={(e) => handleAvatarError(e, m.photo, m.name)}
               className="w-24 h-24 rounded-full object-cover border-2 border-blue-500/40 group-hover:border-blue-400 transition-colors shadow-lg mb-4 bg-gray-800"
             />
             <h3 className="text-base font-bold text-white font-display group-hover:text-blue-400 transition-colors">
