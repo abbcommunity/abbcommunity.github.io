@@ -10,6 +10,7 @@ import {
   XCircle,
   Loader2,
   Download,
+  Check,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useMembers } from '../../hooks/useMembers';
@@ -190,7 +191,6 @@ export const AdminMembersPage: React.FC = () => {
       let rawPhotoURL = '';
 
       if (isHeaderLine) {
-        // Smart Header-based Mapping
         headerCols.forEach((h, colIdx) => {
           const val = (cols[colIdx] || '').trim();
           if (!val) return;
@@ -199,7 +199,7 @@ export const AdminMembersPage: React.FC = () => {
           if (h === 'nik' || h.startsWith('nik')) {
             nik = val;
           }
-          // 2. Email Address (Explicit check to prevent matching 'Kontak (Email / Telp)')
+          // 2. Email Address
           else if ((h.includes('email address') || h === 'email') && val.includes('@')) {
             email = val;
           }
@@ -233,6 +233,16 @@ export const AdminMembersPage: React.FC = () => {
         });
       } else {
         // Positional Mapping matching 10-column template:
+        // Col 0: Nama Anggota
+        // Col 1: Kontak (Email / Telp)
+        // Col 2: Alamat
+        // Col 3: Jabatan & Chapte
+        // Col 4: Status
+        // Col 5: Aksi
+        // Col 6: NIK
+        // Col 7: Timestamp
+        // Col 8: Email Address
+        // Col 9: Foto Profil Bebas
         name = cols[0] || '';
         const kontakCol = cols[1] || '';
         if (kontakCol.includes('@')) email = kontakCol;
@@ -253,8 +263,7 @@ export const AdminMembersPage: React.FC = () => {
         rawPhotoURL = cols[9] || cols[4] || '';
       }
 
-      // --- SMART VALUE AUTO-DISAMBIGUATION (Fixes misaligned columns) ---
-      // 1. If email has no '@' but looks like NIK (e.g. 'ABB079' or numbers), move to NIK
+      // --- SMART VALUE AUTO-DISAMBIGUATION ---
       if (email && !email.includes('@')) {
         if (!nik || nik === 'active' || nik === 'valid') {
           nik = email;
@@ -262,18 +271,15 @@ export const AdminMembersPage: React.FC = () => {
         email = '';
       }
 
-      // 2. If NIK was set to status string ('active', 'valid', etc.), clear NIK
       if (nik.toLowerCase() === 'active' || nik.toLowerCase() === 'valid' || nik.toLowerCase() === 'status') {
         nik = '';
       }
 
-      // 3. If phone contains '@', move to email
       if (phone && phone.includes('@') && !email) {
         email = phone;
         phone = '';
       }
 
-      // 4. If rawPhotoURL is empty, but address contains Google Drive URL, move to photoURL
       if (!rawPhotoURL && address.includes('http')) {
         rawPhotoURL = address;
         address = '';
@@ -341,7 +347,6 @@ export const AdminMembersPage: React.FC = () => {
   const handleExecuteBulkImport = async () => {
     if (!user || parsedPreview.length === 0) return;
 
-    // 1. Status: MENUNGGU PROSES (Loading)
     setImportOpState({
       status: 'loading',
       message: `⏳ Menunggu proses: Sedang menyimpan 0 / ${parsedPreview.length} data anggota ke Cloud Firestore...`,
@@ -380,7 +385,6 @@ export const AdminMembersPage: React.FC = () => {
         }
       );
 
-      // 2. Status: BERHASIL (Success)
       setImportOpState({
         status: 'success',
         message: `✅ BERHASIL: Menyimpan ${count} data anggota ke database Cloud Firestore!`,
@@ -395,7 +399,6 @@ export const AdminMembersPage: React.FC = () => {
         refetch();
       }, 1500);
     } catch (err: any) {
-      // 3. Status: GAGAL (Error)
       setImportOpState({
         status: 'error',
         message: `❌ GAGAL: Terjadi kesalahan saat menyimpan data: ${err.message || err}`,
@@ -447,7 +450,7 @@ export const AdminMembersPage: React.FC = () => {
             <Users className="w-5 h-5 text-red-500" /> Manajemen Anggota ABB
           </h2>
           <p className="text-gray-400 text-xs mt-1">
-            Pengelolaan direktori anggota, NIK, kepengurusan, multiple delete, dan import Excel (.xlsx/.xls/.csv).
+            Pengelolaan direktori anggota, NIK, kepengurusan, multiple delete, dan import Excel (.xlsx/.xls/.csv) 10 Kolom.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -496,12 +499,12 @@ export const AdminMembersPage: React.FC = () => {
         )}
       </div>
 
-      {/* Members Table */}
-      <div className="bg-[#101622] border border-gray-800 rounded-2xl overflow-hidden">
-        <table className="w-full text-left text-xs">
+      {/* Members Main Directory Table (Matches 10 Columns of Excel Template) */}
+      <div className="bg-[#101622] border border-gray-800 rounded-2xl overflow-x-auto">
+        <table className="w-full text-left text-xs whitespace-nowrap">
           <thead>
-            <tr className="border-b border-gray-800 text-gray-400 font-semibold uppercase text-[10px] tracking-wider bg-[#0C111A]">
-              <th className="py-3 px-4 w-10">
+            <tr className="border-b border-gray-800 text-gray-400 font-bold uppercase text-[10px] tracking-wider bg-[#0C111A]">
+              <th className="py-3 px-3 w-8">
                 <input
                   type="checkbox"
                   checked={isAllSelected}
@@ -509,29 +512,33 @@ export const AdminMembersPage: React.FC = () => {
                   className="rounded border-gray-700 bg-gray-900 text-red-600 focus:ring-red-500 cursor-pointer"
                 />
               </th>
-              <th className="py-3 px-4">Nama Anggota</th>
-              <th className="py-3 px-4">NIK</th>
-              <th className="py-3 px-4">Kontak (Email / Telp)</th>
-              <th className="py-3 px-4">Alamat</th>
-              <th className="py-3 px-4">Jabatan & Chapter</th>
-              <th className="py-3 px-4 text-right">Aksi</th>
+              <th className="py-3 px-3">Nama Anggota</th>
+              <th className="py-3 px-3">Kontak (Email / Telp)</th>
+              <th className="py-3 px-3">Alamat</th>
+              <th className="py-3 px-3">Jabatan & Chapter</th>
+              <th className="py-3 px-3">Status</th>
+              <th className="py-3 px-3">NIK</th>
+              <th className="py-3 px-3">Timestamp</th>
+              <th className="py-3 px-3">Email Address</th>
+              <th className="py-3 px-3">Foto Profil</th>
+              <th className="py-3 px-3 text-right">Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-800/60 text-gray-300">
             {loading ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-gray-500">Memuat data anggota...</td>
+                <td colSpan={11} className="py-8 text-center text-gray-500">Memuat data anggota...</td>
               </tr>
             ) : filteredMembers.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-gray-500">Tidak ada anggota yang cocok.</td>
+                <td colSpan={11} className="py-8 text-center text-gray-500">Tidak ada anggota yang cocok.</td>
               </tr>
             ) : (
               filteredMembers.map((m) => {
                 const isSelected = selectedIds.includes(m.id);
                 return (
                   <tr key={m.id} className={`hover:bg-gray-800/30 transition ${isSelected ? 'bg-red-950/20' : ''}`}>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-3">
                       <input
                         type="checkbox"
                         checked={isSelected}
@@ -539,28 +546,41 @@ export const AdminMembersPage: React.FC = () => {
                         className="rounded border-gray-700 bg-gray-900 text-red-600 focus:ring-red-500 cursor-pointer"
                       />
                     </td>
-                    <td className="py-3 px-4 font-semibold text-white flex items-center gap-2">
+                    <td className="py-3 px-3 font-semibold text-white flex items-center gap-2">
                       <img
                         src={getAvatarUrl(m.photoURL, m.name)}
                         alt={m.name}
-                        className="w-8 h-8 rounded-full object-cover border border-gray-700 bg-gray-800"
+                        className="w-8 h-8 rounded-full object-cover border border-gray-700 bg-gray-800 shrink-0"
                       />
                       <div>
                         <p className="text-white font-bold">{m.name}</p>
                         <p className="text-[10px] text-gray-500">Joined {m.joinYear || 2026}</p>
                       </div>
                     </td>
-                    <td className="py-3 px-4 font-mono text-gray-400 text-[11px]">{m.nik || '-'}</td>
-                    <td className="py-3 px-4 text-gray-300">
-                      <p className="font-mono text-gray-300">{m.email || '-'}</p>
-                      <p className="text-[10px] text-gray-500">{m.phone || '-'}</p>
-                    </td>
-                    <td className="py-3 px-4 text-gray-400 max-w-xs truncate">{m.address || '-'}</td>
-                    <td className="py-3 px-4 text-gray-300">
+                    <td className="py-3 px-3 font-mono text-gray-300 text-[11px]">{m.phone || '-'}</td>
+                    <td className="py-3 px-3 text-gray-400 max-w-xs truncate">{m.address || '-'}</td>
+                    <td className="py-3 px-3 text-gray-300">
                       <p className="font-medium text-white">{m.position || 'Anggota'}</p>
                       <p className="text-[10px] text-gray-500">{m.chapter || 'Bekasi Chapter'}</p>
                     </td>
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-3 px-3">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-800/40">
+                        {m.status || 'active'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 font-mono text-emerald-400 text-[11px] font-semibold">{m.nik || '-'}</td>
+                    <td className="py-3 px-3 text-[10px] text-gray-500 font-mono">{m.createdAt ? m.createdAt.slice(0, 10) : '-'}</td>
+                    <td className="py-3 px-3 font-mono text-blue-300 text-[11px]">{m.email || '-'}</td>
+                    <td className="py-3 px-3 text-[10px] text-gray-400">
+                      {m.photoURL ? (
+                        <span className="text-emerald-400 flex items-center gap-1 font-semibold">
+                          <Check className="w-3 h-3" /> Ada Foto
+                        </span>
+                      ) : (
+                        <span className="text-gray-500">Default</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-3 text-right">
                       <button
                         onClick={() => handleDeleteMember(m.id)}
                         className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition"
@@ -687,7 +707,7 @@ export const AdminMembersPage: React.FC = () => {
       {/* Bulk Import Excel / CSV Modal */}
       {isImportModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#121824] border border-gray-800 rounded-2xl max-w-3xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col">
+          <div className="bg-[#121824] border border-gray-800 rounded-2xl max-w-4xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between border-b border-gray-800 pb-3">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <FileSpreadsheet className="w-5 h-5 text-emerald-400" /> Import Massal Data Anggota Excel (.xlsx/.xls/.csv)
@@ -753,41 +773,48 @@ export const AdminMembersPage: React.FC = () => {
                 ></textarea>
               </div>
 
-              {/* Parsed Preview Table */}
+              {/* Parsed Preview Table (Matches 10 Columns of Excel Template) */}
               {parsedPreview.length > 0 && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-white">Preview Data Terdeteksi ({parsedPreview.length} Anggota):</span>
                   </div>
-                  <div className="bg-[#0C111A] border border-gray-800 rounded-xl max-h-48 overflow-y-auto">
-                    <table className="w-full text-left text-[11px]">
-                      <thead className="bg-gray-800/80 text-gray-400 font-semibold sticky top-0">
+                  <div className="bg-[#0C111A] border border-gray-800 rounded-xl max-h-48 overflow-x-auto">
+                    <table className="w-full text-left text-[11px] whitespace-nowrap">
+                      <thead className="bg-gray-800/80 text-gray-400 font-bold uppercase text-[9px] tracking-wider sticky top-0">
                         <tr>
                           <th className="p-2">#</th>
-                          <th className="p-2">Foto</th>
-                          <th className="p-2">Nama</th>
-                          <th className="p-2">NIK</th>
-                          <th className="p-2">Email</th>
-                          <th className="p-2">No. Telp</th>
-                          <th className="p-2">Jabatan & Chapter</th>
+                          <th className="p-2">1. Nama Anggota</th>
+                          <th className="p-2">2. Kontak</th>
+                          <th className="p-2">3. Alamat</th>
+                          <th className="p-2">4. Jabatan & Chapter</th>
+                          <th className="p-2">5. Status</th>
+                          <th className="p-2">6. NIK</th>
+                          <th className="p-2">7. Email Address</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-800/50 text-gray-300 font-mono">
                         {parsedPreview.map((row, idx) => (
                           <tr key={idx}>
                             <td className="p-2 text-gray-500">{idx + 1}</td>
-                            <td className="p-2">
+                            <td className="p-2 font-bold text-white flex items-center gap-1.5">
                               <img
                                 src={getAvatarUrl(row.photoURL, row.name)}
                                 alt={row.name}
-                                className="w-6 h-6 rounded-full object-cover border border-gray-700 bg-gray-800"
+                                className="w-5 h-5 rounded-full object-cover border border-gray-700 bg-gray-800 shrink-0"
                               />
+                              <span>{row.name}</span>
                             </td>
-                            <td className="p-2 font-bold text-white">{row.name}</td>
+                            <td className="p-2 text-gray-300">{row.phone || '-'}</td>
+                            <td className="p-2 text-gray-400 max-w-[150px] truncate">{row.address || '-'}</td>
+                            <td className="p-2 text-gray-300">{row.position} - {row.chapter}</td>
+                            <td className="p-2">
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-800/40">
+                                {row.status || 'active'}
+                              </span>
+                            </td>
                             <td className="p-2 text-emerald-400 font-semibold">{row.nik || '-'}</td>
                             <td className="p-2 text-blue-300">{row.email || '-'}</td>
-                            <td className="p-2 text-gray-400">{row.phone || '-'}</td>
-                            <td className="p-2 text-gray-300">{row.position} - {row.chapter}</td>
                           </tr>
                         ))}
                       </tbody>
