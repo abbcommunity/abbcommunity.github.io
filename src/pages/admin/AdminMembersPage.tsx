@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Plus, Search, Trash2, FileSpreadsheet, Upload, CheckCircle, Download } from 'lucide-react';
+import { Users, Plus, Search, Trash2, FileSpreadsheet, Upload, CheckCircle, Download, CheckSquare, Square } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useMembers } from '../../hooks/useMembers';
 import { memberService } from '../../services/memberService';
@@ -13,6 +13,8 @@ export const AdminMembersPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
 
   // Form single member state
   const [formData, setFormData] = useState({
@@ -41,6 +43,44 @@ export const AdminMembersPage: React.FC = () => {
     m.chapter?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     m.position?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const isAllSelected =
+    filteredMembers.length > 0 && filteredMembers.every((m) => selectedIds.includes(m.id));
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredMembers.map((m) => m.id));
+    }
+  };
+
+  const toggleSelectOne = (id: string) => {
+    if (selectedIds.includes(id)) {
+      setSelectedIds(selectedIds.filter((item) => item !== id));
+    } else {
+      setSelectedIds([...selectedIds, id]);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!user || selectedIds.length === 0) return;
+    if (!confirm(`Apakah Anda yakin ingin menghapus ${selectedIds.length} anggota yang dipilih secara permanen?`)) {
+      return;
+    }
+
+    setIsDeletingBulk(true);
+    try {
+      const count = await memberService.bulkDeleteMembers(selectedIds, user.uid);
+      alert(`Berhasil menghapus ${count} data anggota.`);
+      setSelectedIds([]);
+      refetch();
+    } catch (err: any) {
+      alert(`Gagal menghapus data massal: ${err.message}`);
+    } finally {
+      setIsDeletingBulk(false);
+    }
+  };
 
   const handleCreateMember = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -300,7 +340,7 @@ export const AdminMembersPage: React.FC = () => {
             <Users className="w-5 h-5 text-red-500" /> Manajemen Anggota ABB
           </h2>
           <p className="text-gray-400 text-xs mt-1">
-            Pengelolaan direktori anggota, NIK, kepengurusan, dan import data massal Excel (.xlsx/.xls/.csv).
+            Pengelolaan direktori anggota, NIK, kepengurusan, multiple delete, dan import Excel (.xlsx/.xls/.csv).
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -319,16 +359,34 @@ export const AdminMembersPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter & Search */}
-      <div className="bg-[#101622] border border-gray-800 rounded-2xl p-4 flex items-center gap-3">
-        <Search className="w-4 h-4 text-gray-400" />
-        <input
-          type="text"
-          placeholder="Cari anggota berdasarkan nama, NIK, email, jabatan, atau chapter..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full bg-transparent text-xs text-white placeholder-gray-500 focus:outline-none"
-        />
+      {/* Filter, Search & Bulk Delete Toolbar */}
+      <div className="bg-[#101622] border border-gray-800 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="relative w-full sm:w-96 flex items-center gap-3">
+          <Search className="w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Cari anggota berdasarkan nama, NIK, email, jabatan, atau chapter..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-transparent text-xs text-white placeholder-gray-500 focus:outline-none"
+          />
+        </div>
+
+        {/* Bulk Action Controls */}
+        {selectedIds.length > 0 && (
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-end bg-red-950/40 border border-red-900/60 px-3.5 py-1.5 rounded-xl">
+            <span className="text-xs font-semibold text-red-300">
+              Terpilih: <strong>{selectedIds.length}</strong> anggota
+            </span>
+            <button
+              onClick={handleBulkDelete}
+              disabled={isDeletingBulk}
+              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold text-xs rounded-lg transition flex items-center gap-1.5 shadow-md shadow-red-600/30"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> {isDeletingBulk ? 'Menghapus...' : `Hapus (${selectedIds.length}) Terpilih`}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Members Table */}
@@ -336,6 +394,14 @@ export const AdminMembersPage: React.FC = () => {
         <table className="w-full text-left text-xs">
           <thead>
             <tr className="border-b border-gray-800 text-gray-400 font-semibold uppercase text-[10px] tracking-wider bg-[#0C111A]">
+              <th className="py-3 px-4 w-10">
+                <input
+                  type="checkbox"
+                  checked={isAllSelected}
+                  onChange={toggleSelectAll}
+                  className="rounded border-gray-700 bg-gray-900 text-red-600 focus:ring-red-500 cursor-pointer"
+                />
+              </th>
               <th className="py-3 px-4">Nama Anggota</th>
               <th className="py-3 px-4">NIK</th>
               <th className="py-3 px-4">Kontak (Email / Telp)</th>
@@ -347,47 +413,58 @@ export const AdminMembersPage: React.FC = () => {
           <tbody className="divide-y divide-gray-800/60 text-gray-300">
             {loading ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-gray-500">Memuat data anggota...</td>
+                <td colSpan={7} className="py-8 text-center text-gray-500">Memuat data anggota...</td>
               </tr>
             ) : filteredMembers.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-gray-500">Tidak ada anggota yang cocok.</td>
+                <td colSpan={7} className="py-8 text-center text-gray-500">Tidak ada anggota yang cocok.</td>
               </tr>
             ) : (
-              filteredMembers.map((m) => (
-                <tr key={m.id} className="hover:bg-gray-800/30 transition">
-                  <td className="py-3 px-4 font-semibold text-white flex items-center gap-2">
-                    <img
-                      src={getAvatarUrl(m.photoURL, m.name)}
-                      alt={m.name}
-                      className="w-8 h-8 rounded-full object-cover border border-gray-700 bg-gray-800"
-                    />
-                    <div>
-                      <p className="text-white font-bold">{m.name}</p>
-                      <p className="text-[10px] text-gray-500">Joined {m.joinYear || 2026}</p>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 font-mono text-gray-400 text-[11px]">{m.nik || '-'}</td>
-                  <td className="py-3 px-4 text-gray-300">
-                    <p className="font-mono text-gray-300">{m.email || '-'}</p>
-                    <p className="text-[10px] text-gray-500">{m.phone || '-'}</p>
-                  </td>
-                  <td className="py-3 px-4 text-gray-400 max-w-xs truncate">{m.address || '-'}</td>
-                  <td className="py-3 px-4 text-gray-300">
-                    <p className="font-medium text-white">{m.position || 'Anggota'}</p>
-                    <p className="text-[10px] text-gray-500">{m.chapter || 'Bekasi Chapter'}</p>
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <button
-                      onClick={() => handleDeleteMember(m.id)}
-                      className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition"
-                      title="Hapus Anggota"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </td>
-                </tr>
-              ))
+              filteredMembers.map((m) => {
+                const isSelected = selectedIds.includes(m.id);
+                return (
+                  <tr key={m.id} className={`hover:bg-gray-800/30 transition ${isSelected ? 'bg-red-950/20' : ''}`}>
+                    <td className="py-3 px-4">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelectOne(m.id)}
+                        className="rounded border-gray-700 bg-gray-900 text-red-600 focus:ring-red-500 cursor-pointer"
+                      />
+                    </td>
+                    <td className="py-3 px-4 font-semibold text-white flex items-center gap-2">
+                      <img
+                        src={getAvatarUrl(m.photoURL, m.name)}
+                        alt={m.name}
+                        className="w-8 h-8 rounded-full object-cover border border-gray-700 bg-gray-800"
+                      />
+                      <div>
+                        <p className="text-white font-bold">{m.name}</p>
+                        <p className="text-[10px] text-gray-500">Joined {m.joinYear || 2026}</p>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 font-mono text-gray-400 text-[11px]">{m.nik || '-'}</td>
+                    <td className="py-3 px-4 text-gray-300">
+                      <p className="font-mono text-gray-300">{m.email || '-'}</p>
+                      <p className="text-[10px] text-gray-500">{m.phone || '-'}</p>
+                    </td>
+                    <td className="py-3 px-4 text-gray-400 max-w-xs truncate">{m.address || '-'}</td>
+                    <td className="py-3 px-4 text-gray-300">
+                      <p className="font-medium text-white">{m.position || 'Anggota'}</p>
+                      <p className="text-[10px] text-gray-500">{m.chapter || 'Bekasi Chapter'}</p>
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <button
+                        onClick={() => handleDeleteMember(m.id)}
+                        className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition"
+                        title="Hapus Anggota"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

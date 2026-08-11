@@ -129,6 +129,21 @@ export const memberService = {
     return count;
   },
 
+  async bulkDeleteMembers(ids: string[], actorId: string): Promise<number> {
+    const batch = writeBatch(db);
+    let count = 0;
+
+    for (const id of ids) {
+      const ref = doc(db, COLLECTION_NAME, id);
+      batch.delete(ref);
+      count++;
+    }
+
+    await batch.commit();
+    await auditLogService.logAction(actorId, 'BULK_MEMBERS_DELETED', 'members', 'batch', { count, deletedIds: ids });
+    return count;
+  },
+
   async updateMember(id: string, updates: Partial<MemberProfile>, actorId: string): Promise<void> {
     const docRef = doc(db, COLLECTION_NAME, id);
     const now = new Date().toISOString();
