@@ -28,11 +28,19 @@ interface OperationState {
 }
 
 /**
+ * Strips leading/trailing single quotes ('), double quotes ("), or Excel leading apostrophes.
+ */
+const cleanString = (val?: string | null): string => {
+  if (!val) return '';
+  return val.trim().replace(/^['"]+/, '').replace(/['"]+$/, '').replace(/^'/, '');
+};
+
+/**
  * RFC-4180 compliant CSV line parser with escaped quote ("") support.
  */
 const parseCSVLineWithQuotes = (line: string, delimiter: string): string[] => {
   if (delimiter === '\t') {
-    return line.split('\t').map((s) => s.trim().replace(/^"(.*)"$/, '$1').replace(/""/g, '"'));
+    return line.split('\t').map((s) => cleanString(s).replace(/""/g, '"'));
   }
 
   const result: string[] = [];
@@ -50,13 +58,13 @@ const parseCSVLineWithQuotes = (line: string, delimiter: string): string[] => {
         inQuotes = !inQuotes;
       }
     } else if (char === delimiter && !inQuotes) {
-      result.push(current.trim().replace(/^"(.*)"$/, '$1').replace(/""/g, '"'));
+      result.push(cleanString(current).replace(/""/g, '"'));
       current = '';
     } else {
       current += char;
     }
   }
-  result.push(current.trim().replace(/^"(.*)"$/, '$1').replace(/""/g, '"'));
+  result.push(cleanString(current).replace(/""/g, '"'));
   return result;
 };
 
@@ -189,11 +197,11 @@ export const AdminMembersPage: React.FC = () => {
     try {
       await memberService.createMember(
         {
-          name: formData.name,
-          email: formData.email || '',
-          phone: formData.phone || '',
-          address: formData.address || '',
-          nik: formData.nik || '',
+          name: cleanString(formData.name),
+          email: cleanString(formData.email),
+          phone: cleanString(formData.phone),
+          address: cleanString(formData.address),
+          nik: cleanString(formData.nik),
           position: formData.position || 'Anggota',
           chapter: formData.chapter || 'Bekasi Chapter',
           joinYear: formData.joinYear || 2026,
@@ -231,7 +239,7 @@ export const AdminMembersPage: React.FC = () => {
   const parseExcelSheetRows = (rows: any[][]) => {
     if (!rows || rows.length === 0) return;
 
-    const firstRow = (rows[0] || []).map((c) => String(c ?? '').trim().toLowerCase());
+    const firstRow = (rows[0] || []).map((c) => cleanString(String(c ?? '')).toLowerCase());
     const isHeaderLine =
       firstRow.some((h) => h.includes('nama')) ||
       firstRow.some((h) => h.includes('email')) ||
@@ -256,7 +264,7 @@ export const AdminMembersPage: React.FC = () => {
 
       if (isHeaderLine) {
         firstRow.forEach((h, colIdx) => {
-          const val = String(row[colIdx] ?? '').trim();
+          const val = cleanString(String(row[colIdx] ?? ''));
           if (!val) return;
 
           if (h === 'nik' || h.startsWith('nik')) {
@@ -283,13 +291,13 @@ export const AdminMembersPage: React.FC = () => {
           }
         });
       } else {
-        name = String(row[0] ?? '').trim();
-        const kontak = String(row[1] ?? '').trim();
+        name = cleanString(String(row[0] ?? ''));
+        const kontak = cleanString(String(row[1] ?? ''));
         if (kontak.includes('@')) email = kontak;
         else phone = kontak;
 
-        address = String(row[2] ?? '').trim();
-        const jabChap = String(row[3] ?? '').trim();
+        address = cleanString(String(row[2] ?? ''));
+        const jabChap = cleanString(String(row[3] ?? ''));
         if (jabChap.includes('-')) {
           const parts = jabChap.split('-');
           position = parts[0].trim();
@@ -298,17 +306,24 @@ export const AdminMembersPage: React.FC = () => {
           position = jabChap;
         }
 
-        nik = String(row[6] ?? '').trim();
-        if (row[8]) email = String(row[8] ?? '').trim();
-        rawPhotoURL = String(row[9] ?? row[4] ?? '').trim();
+        nik = cleanString(String(row[6] ?? ''));
+        if (row[8]) email = cleanString(String(row[8] ?? ''));
+        rawPhotoURL = cleanString(String(row[9] ?? row[4] ?? ''));
       }
+
+      // Clean single/double quotes from phone, email, and NIK
+      phone = cleanString(phone);
+      email = cleanString(email);
+      nik = cleanString(nik);
+      name = cleanString(name);
+      address = cleanString(address);
 
       // --- SMART DEEP NIK SEARCH & SANITIZATION ---
       const isInvalidNik = !nik || nik.match(/kab|bekasi|jabar|kec|kel|rt\.|rw\.|jln|jalan|gg|active|valid|status/i) || nik.includes('.');
       if (isInvalidNik) {
         nik = '';
         for (const cellVal of row) {
-          const strVal = String(cellVal ?? '').trim();
+          const strVal = cleanString(String(cellVal ?? ''));
           if (strVal.match(/^ABB\d{3,}$/i)) {
             nik = strVal.toUpperCase();
             break;
@@ -351,7 +366,7 @@ export const AdminMembersPage: React.FC = () => {
     if (lines.length === 0) return;
 
     const headerLine = lines[0];
-    const headerCols = parseCSVLineWithQuotes(headerLine, headerLine.includes('\t') ? '\t' : ',').map((h) => h.trim().toLowerCase());
+    const headerCols = parseCSVLineWithQuotes(headerLine, headerLine.includes('\t') ? '\t' : ',').map((h) => cleanString(h).toLowerCase());
     
     const isHeaderLine =
       headerCols.some(h => h.includes('nama')) ||
@@ -381,7 +396,7 @@ export const AdminMembersPage: React.FC = () => {
 
       if (isHeaderLine) {
         headerCols.forEach((h, colIdx) => {
-          const val = (cols[colIdx] || '').trim();
+          const val = cleanString(cols[colIdx] || '');
           if (!val) return;
 
           if (h === 'nik' || h.startsWith('nik')) {
@@ -408,13 +423,13 @@ export const AdminMembersPage: React.FC = () => {
           }
         });
       } else {
-        name = cols[0] || '';
-        const kontakCol = cols[1] || '';
+        name = cleanString(cols[0] || '');
+        const kontakCol = cleanString(cols[1] || '');
         if (kontakCol.includes('@')) email = kontakCol;
         else phone = kontakCol;
 
-        address = cols[2] || '';
-        const jabChap = cols[3] || '';
+        address = cleanString(cols[2] || '');
+        const jabChap = cleanString(cols[3] || '');
         if (jabChap.includes('-')) {
           const parts = jabChap.split('-');
           position = parts[0].trim();
@@ -423,21 +438,27 @@ export const AdminMembersPage: React.FC = () => {
           position = jabChap;
         }
 
-        nik = cols[6] || '';
-        if (cols[8]) email = cols[8];
-        rawPhotoURL = cols[9] || cols[4] || '';
+        nik = cleanString(cols[6] || '');
+        if (cols[8]) email = cleanString(cols[8]);
+        rawPhotoURL = cleanString(cols[9] || cols[4] || '');
       }
+
+      phone = cleanString(phone);
+      email = cleanString(email);
+      nik = cleanString(nik);
+      name = cleanString(name);
+      address = cleanString(address);
 
       // --- SMART DEEP NIK SEARCH & RE-DISAMBIGUATION ---
       const isInvalidNik = !nik || nik.match(/kab|bekasi|jabar|kec|kel|rt\.|rw\.|jln|jalan|gg|active|valid|status/i) || nik.includes('.');
       if (isInvalidNik) {
         if (nik && (nik.match(/kab|bekasi|jabar|kec|kel|rt\.|rw\.|jln|jalan|gg/i) || nik.includes('.'))) {
-          address = address ? `${address}, ${nik.replace(/"/g, '')}` : nik.replace(/"/g, '');
+          address = address ? `${address}, ${cleanString(nik)}` : cleanString(nik);
         }
         nik = '';
 
         for (const colVal of cols) {
-          const cleanedVal = colVal.trim().replace(/^"(.*)"$/, '$1');
+          const cleanedVal = cleanString(colVal);
           if (cleanedVal.match(/^ABB\d{3,}$/i)) {
             nik = cleanedVal.toUpperCase();
             break;
@@ -506,7 +527,6 @@ export const AdminMembersPage: React.FC = () => {
           const workbook = XLSX.read(data, { type: 'array' });
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
-          // Use native 2D cell array for 100% exact Excel column parsing
           const sheetRows = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1 });
           parseExcelSheetRows(sheetRows);
         } catch (err: any) {
@@ -543,11 +563,11 @@ export const AdminMembersPage: React.FC = () => {
 
     try {
       const itemsToImport = parsedPreview.map((item) => ({
-        name: item.name || 'Anggota ABB',
-        email: item.email || '',
-        phone: item.phone || '',
-        address: item.address || '',
-        nik: item.nik || '',
+        name: cleanString(item.name) || 'Anggota ABB',
+        email: cleanString(item.email),
+        phone: cleanString(item.phone),
+        address: cleanString(item.address),
+        nik: cleanString(item.nik),
         position: item.position || 'Anggota',
         chapter: item.chapter || 'Bekasi Chapter',
         joinYear: item.joinYear || 2026,
@@ -802,12 +822,12 @@ export const AdminMembersPage: React.FC = () => {
                         className="w-8 h-8 rounded-full object-cover border border-gray-700 bg-gray-800 shrink-0"
                       />
                       <div>
-                        <p className="text-white font-bold">{m.name}</p>
+                        <p className="text-white font-bold">{cleanString(m.name)}</p>
                         <p className="text-[10px] text-gray-500">Joined {m.joinYear || 2026}</p>
                       </div>
                     </td>
-                    <td className="py-3 px-3 font-mono text-gray-300 text-[11px]">{m.phone || '-'}</td>
-                    <td className="py-3 px-3 text-gray-400 max-w-xs truncate">{m.address || '-'}</td>
+                    <td className="py-3 px-3 font-mono text-gray-300 text-[11px]">{cleanString(m.phone) || '-'}</td>
+                    <td className="py-3 px-3 text-gray-400 max-w-xs truncate">{cleanString(m.address) || '-'}</td>
                     <td className="py-3 px-3 text-gray-300">
                       <p className="font-medium text-white">{m.position || 'Anggota'}</p>
                       <p className="text-[10px] text-gray-500">{m.chapter || 'Bekasi Chapter'}</p>
@@ -817,9 +837,9 @@ export const AdminMembersPage: React.FC = () => {
                         {m.status || 'active'}
                       </span>
                     </td>
-                    <td className="py-3 px-3 font-mono text-emerald-400 text-[11px] font-semibold">{m.nik || '-'}</td>
+                    <td className="py-3 px-3 font-mono text-emerald-400 text-[11px] font-semibold">{cleanString(m.nik) || '-'}</td>
                     <td className="py-3 px-3 text-[10px] text-gray-500 font-mono">{m.createdAt ? m.createdAt.slice(0, 10) : '-'}</td>
-                    <td className="py-3 px-3 font-mono text-blue-300 text-[11px]">{m.email || '-'}</td>
+                    <td className="py-3 px-3 font-mono text-blue-300 text-[11px]">{cleanString(m.email) || '-'}</td>
                     <td className="py-3 px-3 text-[10px] text-gray-400">
                       {m.photoURL ? (
                         <span className="text-emerald-400 flex items-center gap-1 font-semibold">
@@ -1053,18 +1073,18 @@ export const AdminMembersPage: React.FC = () => {
                                 onError={(e) => handleAvatarError(e, row.photoURL, row.name)}
                                 className="w-5 h-5 rounded-full object-cover border border-gray-700 bg-gray-800 shrink-0"
                               />
-                              <span>{row.name}</span>
+                              <span>{cleanString(row.name)}</span>
                             </td>
-                            <td className="p-2 text-gray-300">{row.phone || '-'}</td>
-                            <td className="p-2 text-gray-400 max-w-[150px] truncate">{row.address || '-'}</td>
+                            <td className="p-2 text-gray-300">{cleanString(row.phone) || '-'}</td>
+                            <td className="p-2 text-gray-400 max-w-[150px] truncate">{cleanString(row.address) || '-'}</td>
                             <td className="p-2 text-gray-300">{row.position} - {row.chapter}</td>
                             <td className="p-2">
                               <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-800/40">
                                 {row.status || 'active'}
                               </span>
                             </td>
-                            <td className="p-2 text-emerald-400 font-semibold">{row.nik || '-'}</td>
-                            <td className="p-2 text-blue-300">{row.email || '-'}</td>
+                            <td className="p-2 text-emerald-400 font-semibold">{cleanString(row.nik) || '-'}</td>
+                            <td className="p-2 text-blue-300">{cleanString(row.email) || '-'}</td>
                           </tr>
                         ))}
                       </tbody>
