@@ -1067,7 +1067,7 @@ export const AdminMembersPage: React.FC = () => {
       {/* Add / Edit Member Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#121824] border border-gray-800 rounded-2xl max-w-md w-full p-6 space-y-4">
+          <div className="bg-[#121824] border border-gray-800 rounded-2xl max-w-lg w-full p-6 space-y-4 max-h-[92vh] overflow-y-auto">
             <h3 className="text-lg font-bold text-white text-center">
               {editingMemberId ? '✏️ Edit Data Anggota Komunitas' : '➕ Tambah Anggota Komunitas Baru'}
             </h3>
@@ -1125,29 +1125,27 @@ export const AdminMembersPage: React.FC = () => {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-gray-300 font-semibold mb-1">No. Telepon / WhatsApp *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="0812-xxxx-xxxx"
-                    className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-red-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-gray-300 font-semibold mb-1">Alamat Tempat Tinggal *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    placeholder="Masukkan alamat domisili"
-                    className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-red-500"
-                  />
-                </div>
+              <div>
+                <label className="block text-gray-300 font-semibold mb-1">No. Telepon / WhatsApp *</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="0812-xxxx-xxxx"
+                  className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-red-500"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 font-semibold mb-1">Alamat Tempat Tinggal *</label>
+                <textarea
+                  required
+                  rows={2.5 as any}
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  placeholder="Masukkan alamat tempat tinggal lengkap domisili Anda..."
+                  className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-red-500 leading-relaxed font-sans text-xs"
+                />
               </div>
               <div>
                 <label className="block text-gray-300 font-semibold mb-1">Foto Profil * (Upload Device / Google Drive)</label>
