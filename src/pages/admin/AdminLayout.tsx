@@ -125,6 +125,7 @@ export const AdminLayout: React.FC = () => {
   const navigationItems = [
     { label: 'Dashboard Overview', path: '/admin', icon: LayoutDashboard },
     { label: 'Manajemen Anggota', path: '/admin/members', icon: Users },
+    { label: 'Manajemen Uang Kas', path: '/admin/treasury', icon: Wallet },
     { label: 'Manajemen Event', path: '/admin/events', icon: Calendar },
     { label: 'Artikel & Editorial', path: '/admin/stories', icon: BookOpen },
     { label: 'Dokumen Organisasi', path: '/admin/documents', icon: FileText },
