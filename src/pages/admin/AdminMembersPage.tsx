@@ -10,8 +10,6 @@ import {
   XCircle,
   Loader2,
   Download,
-  Clock,
-  AlertCircle
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useMembers } from '../../hooks/useMembers';
@@ -192,24 +190,49 @@ export const AdminMembersPage: React.FC = () => {
       let rawPhotoURL = '';
 
       if (isHeaderLine) {
+        // Smart Header-based Mapping
         headerCols.forEach((h, colIdx) => {
-          const val = cols[colIdx] || '';
-          if (h.includes('nama')) name = val;
-          else if (h.includes('email address') || h.includes('email')) email = val;
-          else if (h.includes('kontak') || h.includes('telp') || h.includes('hp')) phone = val;
-          else if (h.includes('alamat')) address = val;
+          const val = (cols[colIdx] || '').trim();
+          if (!val) return;
+
+          // 1. NIK
+          if (h === 'nik' || h.startsWith('nik')) {
+            nik = val;
+          }
+          // 2. Email Address (Explicit check to prevent matching 'Kontak (Email / Telp)')
+          else if ((h.includes('email address') || h === 'email') && val.includes('@')) {
+            email = val;
+          }
+          // 3. Phone / Kontak
+          else if (h.includes('kontak') || h.includes('telp') || h.includes('hp')) {
+            if (val.includes('@')) email = val;
+            else phone = val;
+          }
+          // 4. Nama
+          else if (h.includes('nama')) {
+            name = val;
+          }
+          // 5. Alamat
+          else if (h.includes('alamat')) {
+            address = val;
+          }
+          // 6. Jabatan & Chapter
           else if (h.includes('jabatan') || h.includes('chapte')) {
             if (val.includes('-')) {
               const parts = val.split('-');
               position = parts[0].trim();
               chapter = parts[1].trim();
-            } else if (val) {
+            } else {
               position = val;
             }
-          } else if (h.includes('nik')) nik = val;
-          else if (h.includes('foto') || h.includes('profil') || h.includes('drive')) rawPhotoURL = val;
+          }
+          // 7. Foto Profil / Drive URL
+          else if (h.includes('foto') || h.includes('profil') || h.includes('drive')) {
+            rawPhotoURL = val;
+          }
         });
       } else {
+        // Positional Mapping matching 10-column template:
         name = cols[0] || '';
         const kontakCol = cols[1] || '';
         if (kontakCol.includes('@')) email = kontakCol;
@@ -228,6 +251,32 @@ export const AdminMembersPage: React.FC = () => {
         nik = cols[6] || '';
         if (cols[8]) email = cols[8];
         rawPhotoURL = cols[9] || cols[4] || '';
+      }
+
+      // --- SMART VALUE AUTO-DISAMBIGUATION (Fixes misaligned columns) ---
+      // 1. If email has no '@' but looks like NIK (e.g. 'ABB079' or numbers), move to NIK
+      if (email && !email.includes('@')) {
+        if (!nik || nik === 'active' || nik === 'valid') {
+          nik = email;
+        }
+        email = '';
+      }
+
+      // 2. If NIK was set to status string ('active', 'valid', etc.), clear NIK
+      if (nik.toLowerCase() === 'active' || nik.toLowerCase() === 'valid' || nik.toLowerCase() === 'status') {
+        nik = '';
+      }
+
+      // 3. If phone contains '@', move to email
+      if (phone && phone.includes('@') && !email) {
+        email = phone;
+        phone = '';
+      }
+
+      // 4. If rawPhotoURL is empty, but address contains Google Drive URL, move to photoURL
+      if (!rawPhotoURL && address.includes('http')) {
+        rawPhotoURL = address;
+        address = '';
       }
 
       const photoURL = convertGoogleDriveUrl(rawPhotoURL);
@@ -735,8 +784,8 @@ export const AdminMembersPage: React.FC = () => {
                               />
                             </td>
                             <td className="p-2 font-bold text-white">{row.name}</td>
-                            <td className="p-2 text-gray-400">{row.nik || '-'}</td>
-                            <td className="p-2">{row.email || '-'}</td>
+                            <td className="p-2 text-emerald-400 font-semibold">{row.nik || '-'}</td>
+                            <td className="p-2 text-blue-300">{row.email || '-'}</td>
                             <td className="p-2 text-gray-400">{row.phone || '-'}</td>
                             <td className="p-2 text-gray-300">{row.position} - {row.chapter}</td>
                           </tr>
