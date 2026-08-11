@@ -306,8 +306,9 @@ export interface GlobalStatsDoc {
   updatedAt: string;
 }
 
-export type KasPaymentStatus = 'paid' | 'pending' | 'overdue';
+export type KasPaymentStatus = 'paid' | 'pending' | 'overdue' | 'waived';
 export type KasPaymentMethod = 'transfer' | 'cash' | 'qris';
+export type KasAdjustmentType = 'opening_balance' | 'adjustment_in' | 'adjustment_out' | 'expense';
 
 export interface KasBillingRecord {
   id: string;
@@ -328,13 +329,29 @@ export interface KasBillingRecord {
   updatedAt: string;
 }
 
+export interface KasAdjustmentRecord {
+  id: string;
+  type: KasAdjustmentType;
+  amount: number;
+  title: string;
+  category?: string;
+  proofUrl?: string;
+  notes?: string;
+  actorId: string;
+  actorName: string;
+  createdAt: string;
+}
+
 export interface KasSummaryMetrics {
   totalTarget: number;
   totalCollected: number;
   totalOutstanding: number;
+  totalExpenses: number;
+  realCashBalance: number;
   collectionRate: number; // percentage e.g. 85.5
   totalMembersCount: number;
   paidMembersCount: number;
   pendingMembersCount: number;
   overdueMembersCount: number;
+  waivedMembersCount: number;
 }
