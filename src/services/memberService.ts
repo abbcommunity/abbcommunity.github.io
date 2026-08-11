@@ -113,10 +113,11 @@ export const memberService = {
     if (localDocs.length > 0) {
       setTimeout(() => {
         localDocs.forEach(async (ldoc) => {
-          if (ldoc && ldoc.id) {
+          if (ldoc && (ldoc.id || ldoc.nik)) {
+            const docId = ldoc.id || ('mem_' + (normalizeNikKey(ldoc.nik) || Math.random().toString(36).substring(2, 8)));
             try {
-              const docRef = doc(db, COLLECTION_NAME, ldoc.id);
-              await setDoc(docRef, sanitizeForFirestore(ldoc), { merge: true });
+              const docRef = doc(db, COLLECTION_NAME, docId);
+              await setDoc(docRef, sanitizeForFirestore({ ...ldoc, id: docId }), { merge: true });
             } catch (e) {}
           }
         });
@@ -142,6 +143,26 @@ export const memberService = {
     });
 
     return combined;
+  },
+
+  async syncAllLocalToFirestore(): Promise<number> {
+    const localDocs = getLocalCustomMembers();
+    if (!localDocs || localDocs.length === 0) return 0;
+
+    let syncedCount = 0;
+    for (const ldoc of localDocs) {
+      if (ldoc && (ldoc.id || ldoc.nik)) {
+        const docId = ldoc.id || ('mem_' + (normalizeNikKey(ldoc.nik) || Math.random().toString(36).substring(2, 8)));
+        try {
+          const docRef = doc(db, COLLECTION_NAME, docId);
+          await setDoc(docRef, sanitizeForFirestore({ ...ldoc, id: docId }), { merge: true });
+          syncedCount++;
+        } catch (e) {
+          console.warn('⚠️ Sync item error:', e);
+        }
+      }
+    }
+    return syncedCount;
   },
 
   async getMemberById(id: string): Promise<MemberProfile | null> {

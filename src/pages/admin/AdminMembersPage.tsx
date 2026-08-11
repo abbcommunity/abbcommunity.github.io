@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Filter,
   MessageCircle,
+  Cloud,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useMembers } from '../../hooks/useMembers';
@@ -813,6 +814,22 @@ export const AdminMembersPage: React.FC = () => {
     }
   };
 
+  const [isSyncingCloud, setIsSyncingCloud] = useState(false);
+
+  const handleSyncToCloud = async () => {
+    setIsSyncingCloud(true);
+    try {
+      const count = await memberService.syncAllLocalToFirestore();
+      alert(`✅ Berhasil menyinkronkan & menginjeksi ${count} data anggota lokal ke Cloud Firestore!`);
+      refetch();
+    } catch (err) {
+      console.error('Failed to sync to cloud:', err);
+      alert('Gagal menyinkronkan data ke Cloud Firestore. Pastikan Firestore telah diaktifkan di Firebase Console.');
+    } finally {
+      setIsSyncingCloud(false);
+    }
+  };
+
   const handleCloseImportModal = () => {
     setIsImportModalOpen(false);
     setPastedData('');
@@ -833,7 +850,16 @@ export const AdminMembersPage: React.FC = () => {
             Pengelolaan direktori anggota, NIK, kepengurusan, edit data, multiple delete, dan import Excel (.xlsx/.xls/.csv) 10 Kolom.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleSyncToCloud}
+            disabled={isSyncingCloud}
+            className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold text-xs rounded-xl transition flex items-center gap-2 shadow-lg shadow-indigo-600/20"
+            title="Upload dan injeksi seluruh data anggota lokal ke Cloud Firestore"
+          >
+            {isSyncingCloud ? <Loader2 className="w-4 h-4 animate-spin" /> : <Cloud className="w-4 h-4" />}
+            {isSyncingCloud ? 'Syncing...' : 'Sync Firestore Cloud'}
+          </button>
           <button
             onClick={handleExportExcel}
             className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl transition flex items-center gap-2 shadow-lg shadow-blue-600/20"
