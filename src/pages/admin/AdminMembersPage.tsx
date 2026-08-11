@@ -4,6 +4,7 @@ import { useMembers } from '../../hooks/useMembers';
 import { memberService } from '../../services/memberService';
 import { useAuth } from '../../hooks/useAuth';
 import { MemberProfile } from '../../types/backend';
+import { convertGoogleDriveUrl, getAvatarUrl } from '../../utils/imageUtils';
 
 export const AdminMembersPage: React.FC = () => {
   const { members, loading, refetch } = useMembers(true);
@@ -55,7 +56,7 @@ export const AdminMembersPage: React.FC = () => {
           visibility: 'public',
           motorcycle: { model: formData.motorcycleModel },
           bio: formData.bio,
-          photoURL: formData.photoURL || undefined,
+          photoURL: convertGoogleDriveUrl(formData.photoURL) || undefined,
         },
         user.uid
       );
@@ -99,7 +100,6 @@ export const AdminMembersPage: React.FC = () => {
       const line = lines[i];
       if (!line.trim()) continue;
 
-      // Split by tab or comma
       const delimiter = line.includes('\t') ? '\t' : ',';
       const cols = line.split(delimiter).map((c) => c.trim().replace(/^"(.*)"$/, '$1'));
 
@@ -107,7 +107,10 @@ export const AdminMembersPage: React.FC = () => {
       const name = cols[1] || '';
       const address = cols[2] || '';
       const phone = cols[3] || '';
-      const photoURL = cols[4] || '';
+      const rawPhotoURL = cols[4] || '';
+
+      // Auto convert Google Drive links (e.g. https://drive.google.com/open?id=1aBSRn5GMsR8YsXJTgCyqLCS5cMO3ZPPI)
+      const photoURL = convertGoogleDriveUrl(rawPhotoURL);
 
       if (name || email) {
         parsed.push({
@@ -115,7 +118,7 @@ export const AdminMembersPage: React.FC = () => {
           email,
           address,
           phone,
-          photoURL: photoURL.startsWith('http') ? photoURL : undefined,
+          photoURL: photoURL || undefined,
           position: 'Anggota',
           chapter: 'Bekasi Chapter',
           joinYear: 2026,
@@ -160,7 +163,7 @@ export const AdminMembersPage: React.FC = () => {
       }));
 
       const count = await memberService.bulkImportMembers(itemsToImport, user.uid);
-      setImportStatus(`Berhasil mengimpor ${count} data anggota!`);
+      setImportStatus(`Berhasil mengimpor ${count} data anggota! (Link Google Drive dikonversi otomatis)`);
       setTimeout(() => {
         setIsImportModalOpen(false);
         setPastedData('');
@@ -192,7 +195,7 @@ export const AdminMembersPage: React.FC = () => {
             <Users className="w-5 h-5 text-red-500" /> Manajemen Anggota ABB
           </h2>
           <p className="text-gray-400 text-xs mt-1">
-            Pengelolaan direktori anggota, kepengurusan, dan import data massal dari Excel/CSV.
+            Pengelolaan direktori anggota, kepengurusan, dan import data massal dari Excel/CSV (Mendukung Link Google Drive).
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -250,9 +253,9 @@ export const AdminMembersPage: React.FC = () => {
                 <tr key={m.id} className="hover:bg-gray-800/30 transition">
                   <td className="py-3 px-4 font-semibold text-white flex items-center gap-2">
                     <img
-                      src={m.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100'}
+                      src={getAvatarUrl(m.photoURL, m.name)}
                       alt={m.name}
-                      className="w-8 h-8 rounded-full object-cover border border-gray-700"
+                      className="w-8 h-8 rounded-full object-cover border border-gray-700 bg-gray-800"
                     />
                     <div>
                       <p className="text-white font-bold">{m.name}</p>
@@ -334,6 +337,17 @@ export const AdminMembersPage: React.FC = () => {
                   className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-red-500"
                 />
               </div>
+              <div>
+                <label className="block text-gray-400 mb-1">Link Foto Profil (Google Drive / Web)</label>
+                <input
+                  type="text"
+                  placeholder="https://drive.google.com/open?id=1aBSRn..."
+                  value={formData.photoURL}
+                  onChange={(e) => setFormData({ ...formData, photoURL: e.target.value })}
+                  className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-red-500"
+                />
+                <p className="text-[10px] text-emerald-400 mt-1">✓ Link Google Drive dikonversi otomatis menjadi foto langsung.</p>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-gray-400 mb-1">Jabatan</label>
@@ -395,9 +409,13 @@ export const AdminMembersPage: React.FC = () => {
                 Unggah file <code className="text-emerald-400">.csv</code> atau salin-tempel baris tabel Excel dengan kolom urutan:
                 <br />
                 <span className="font-mono text-white bg-gray-800 px-1.5 py-0.5 rounded mt-1 inline-block">
-                  Email Address | Nama | Alamat | No. Telepon | Foto Profil Bebas
+                  Email Address | Nama | Alamat | No. Telepon | Foto Profil Bebas (Drive URL)
                 </span>
               </p>
+
+              <div className="p-3 bg-emerald-950/40 border border-emerald-800/40 rounded-xl text-emerald-300 text-[11px]">
+                💡 <strong>Sistem Otomatis:</strong> Link Google Drive seperti <code className="text-white">https://drive.google.com/open?id=1aBSRn...</code> atau <code className="text-white">https://drive.google.com/file/d/1aBSRn.../view</code> akan dikonversi menjadi foto langsung!
+              </div>
 
               {/* Upload input */}
               <div>
@@ -415,7 +433,7 @@ export const AdminMembersPage: React.FC = () => {
                 <label className="block text-gray-300 font-semibold mb-1">Opsi 2: Salin-Tempel dari Excel (Copy-Paste)</label>
                 <textarea
                   rows={4}
-                  placeholder="Tempelkan baris dari Excel di sini (misal: user@gmail.com   Adipta Yanuardie   Jl. Ahmad Yani No 2   08123456789   https://...)"
+                  placeholder="Tempelkan baris dari Excel di sini (misal: user@gmail.com   Adipta Yanuardie   Jl. Ahmad Yani No 2   08123456789   https://drive.google.com/open?id=1aBSRn...)"
                   value={pastedData}
                   onChange={(e) => parsePastedExcelCSV(e.target.value)}
                   className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-3 text-white font-mono text-[11px] focus:outline-none focus:border-emerald-500"
@@ -433,6 +451,7 @@ export const AdminMembersPage: React.FC = () => {
                       <thead className="bg-gray-800/80 text-gray-400 font-semibold sticky top-0">
                         <tr>
                           <th className="p-2">#</th>
+                          <th className="p-2">Foto</th>
                           <th className="p-2">Nama</th>
                           <th className="p-2">Email</th>
                           <th className="p-2">Alamat</th>
@@ -443,6 +462,13 @@ export const AdminMembersPage: React.FC = () => {
                         {parsedPreview.map((row, idx) => (
                           <tr key={idx}>
                             <td className="p-2 text-gray-500">{idx + 1}</td>
+                            <td className="p-2">
+                              <img
+                                src={getAvatarUrl(row.photoURL, row.name)}
+                                alt={row.name}
+                                className="w-6 h-6 rounded-full object-cover border border-gray-700 bg-gray-800"
+                              />
+                            </td>
                             <td className="p-2 font-bold text-white">{row.name}</td>
                             <td className="p-2">{row.email || '-'}</td>
                             <td className="p-2 text-gray-400 truncate max-w-[120px]">{row.address || '-'}</td>

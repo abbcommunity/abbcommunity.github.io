@@ -5,6 +5,7 @@ import { Modal } from '../components/ui/Modal';
 import { membersData } from '../data/members';
 import { Member } from '../types';
 import { Search, MapPin, Bike, Calendar, Instagram, Mail } from 'lucide-react';
+import { getAvatarUrl } from '../utils/imageUtils';
 
 export const MembersPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -84,9 +85,9 @@ export const MembersPage: React.FC = () => {
             className="p-6 cursor-pointer flex flex-col items-center text-center group"
           >
             <img
-              src={m.photo}
+              src={getAvatarUrl(m.photo, m.name)}
               alt={m.name}
-              className="w-24 h-24 rounded-full object-cover border-2 border-blue-500/40 group-hover:border-blue-400 transition-colors shadow-lg mb-4"
+              className="w-24 h-24 rounded-full object-cover border-2 border-blue-500/40 group-hover:border-blue-400 transition-colors shadow-lg mb-4 bg-gray-800"
             />
             <h3 className="text-base font-bold text-white font-display group-hover:text-blue-400 transition-colors">
               {m.name}
@@ -116,9 +117,9 @@ export const MembersPage: React.FC = () => {
         <Modal isOpen={!!selectedMember} onClose={() => setSelectedMember(null)} maxWidth="md">
           <div className="space-y-6 text-center">
             <img
-              src={selectedMember.photo}
+              src={getAvatarUrl(selectedMember.photo, selectedMember.name)}
               alt={selectedMember.name}
-              className="w-28 h-28 rounded-full object-cover mx-auto border-4 border-blue-600 shadow-xl"
+              className="w-28 h-28 rounded-full object-cover mx-auto border-4 border-blue-600 shadow-xl bg-gray-800"
             />
             <div>
               <h3 className="text-2xl font-bold text-white font-display">{selectedMember.name}</h3>
