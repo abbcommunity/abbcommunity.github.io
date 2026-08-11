@@ -158,12 +158,14 @@ export const memberService = {
     const existing = getLocalCustomMembers();
     saveLocalCustomMembers([...existing, data]);
 
-    try {
-      await setDoc(newRef, sanitizeForFirestore(data));
-      await auditLogService.logAction(actorId, 'MEMBER_CREATED', 'members', newRef.id, { name: member.name });
-    } catch (err) {
-      console.warn('⚠️ Firestore create member background sync note:', err);
-    }
+    const firestoreSync = setDoc(newRef, sanitizeForFirestore(data))
+      .then(async () => {
+        await auditLogService.logAction(actorId, 'MEMBER_CREATED', 'members', newRef.id, { name: member.name }).catch(() => null);
+      })
+      .catch(() => null);
+
+    const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 1000));
+    await Promise.race([firestoreSync, timeoutPromise]);
 
     return newRef.id;
   },
@@ -325,18 +327,22 @@ export const memberService = {
       });
     }
 
+    // Save to Local Storage INSTANTLY (< 1ms)
     saveLocalCustomMembers(updatedLocal);
 
-    try {
-      const docRef = doc(db, COLLECTION_NAME, id);
-      await updateDoc(docRef, updatedFields).catch(async () => {
-        // Fallback to setDoc if doc doesn't exist in Firestore yet
-        await setDoc(docRef, sanitizeForFirestore({ ...updatedFields, id }));
-      });
-      await auditLogService.logAction(actorId, 'MEMBER_UPDATED', 'members', id, updates).catch(() => null);
-    } catch (err) {
-      console.warn('⚠️ Firestore update member background sync note:', err);
-    }
+    // Sync to Firestore in background with max 1s timeout (non-blocking)
+    const docRef = doc(db, COLLECTION_NAME, id);
+    const firestoreSync = updateDoc(docRef, updatedFields)
+      .catch(async () => {
+        await setDoc(docRef, sanitizeForFirestore({ ...updatedFields, id })).catch(() => null);
+      })
+      .then(async () => {
+        await auditLogService.logAction(actorId, 'MEMBER_UPDATED', 'members', id, updates).catch(() => null);
+      })
+      .catch(() => null);
+
+    const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 1000));
+    await Promise.race([firestoreSync, timeoutPromise]);
   },
 
   async deleteMember(id: string, actorId: string): Promise<void> {
