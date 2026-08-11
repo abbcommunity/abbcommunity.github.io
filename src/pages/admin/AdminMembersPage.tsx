@@ -253,6 +253,21 @@ export const AdminMembersPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
+  const handlePhotoDeviceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Ukuran file foto maksimal 5 MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      setFormData((prev) => ({ ...prev, photoURL: base64 }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleOpenEditModal = (member: MemberProfile) => {
     setEditingMemberId(member.id);
     setFormData({
@@ -1076,57 +1091,74 @@ export const AdminMembersPage: React.FC = () => {
 
             <form onSubmit={handleSaveMember} className="space-y-3 text-xs">
               <div>
-                <label className="block text-gray-400 mb-1">Nama Lengkap</label>
+                <label className="block text-gray-300 font-semibold mb-1">Nama Lengkap *</label>
                 <input
                   type="text"
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Masukkan nama lengkap"
                   className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-red-500"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-gray-400 mb-1">NIK (Nomor Induk Kependudukan)</label>
+                  <label className="block text-gray-300 font-semibold mb-1">NIK (Nomor Anggota) *</label>
                   <input
                     type="text"
+                    required
                     value={formData.nik}
                     onChange={(e) => setFormData({ ...formData, nik: e.target.value })}
+                    placeholder="Contoh: ABB001 / NIK"
                     className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-red-500 font-mono"
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-400 mb-1">Email Address</label>
+                  <label className="block text-gray-300 font-semibold mb-1">Email Address *</label>
                   <input
                     type="email"
+                    required
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="nama@email.com"
                     className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-red-500"
                   />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-gray-400 mb-1">No. Telepon / WhatsApp</label>
+                  <label className="block text-gray-300 font-semibold mb-1">No. Telepon / WhatsApp *</label>
                   <input
                     type="text"
+                    required
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="0812-xxxx-xxxx"
                     className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-red-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-400 mb-1">Alamat Tempat Tinggal</label>
+                  <label className="block text-gray-300 font-semibold mb-1">Alamat Tempat Tinggal *</label>
                   <input
                     type="text"
+                    required
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    placeholder="Masukkan alamat domisili"
                     className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-red-500"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-gray-400 mb-1">Foto Profil Bebas (Google Drive URL)</label>
+                <label className="block text-gray-300 font-semibold mb-1">Foto Profil * (Upload Device / Google Drive)</label>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <label className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition shadow-md shrink-0">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Upload Foto Device</span>
+                    <input type="file" accept="image/*" onChange={handlePhotoDeviceUpload} className="hidden" />
+                  </label>
+                  <span className="text-gray-500 text-[10px]">atau paste link:</span>
+                </div>
                 <input
                   type="text"
                   placeholder="https://drive.google.com/open?id=1aBSRn..."
@@ -1134,22 +1166,24 @@ export const AdminMembersPage: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, photoURL: e.target.value })}
                   className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-emerald-500 font-mono text-[11px]"
                 />
-                <p className="text-[10px] text-emerald-400 mt-1">✓ Link Google Drive dikonversi otomatis menjadi foto langsung di atas.</p>
+                <p className="text-[10px] text-emerald-400 mt-1">✓ Bisa upload dari Galeri/HP/PC atau tempel Link Google Drive.</p>
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-gray-400 mb-1">Jabatan</label>
+                  <label className="block text-gray-300 font-semibold mb-1">Jabatan *</label>
                   <input
                     type="text"
+                    required
                     value={formData.position}
                     onChange={(e) => setFormData({ ...formData, position: e.target.value })}
                     className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-red-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-400 mb-1">Chapter</label>
+                  <label className="block text-gray-300 font-semibold mb-1">Chapter *</label>
                   <input
                     type="text"
+                    required
                     value={formData.chapter}
                     onChange={(e) => setFormData({ ...formData, chapter: e.target.value })}
                     className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-red-500"
