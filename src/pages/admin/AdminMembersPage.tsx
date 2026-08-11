@@ -964,7 +964,7 @@ export const AdminMembersPage: React.FC = () => {
               <th className="py-3 px-3">NIK</th>
               <th className="py-3 px-3">Timestamp</th>
               <th className="py-3 px-3">Email Address</th>
-              <th className="py-3 px-3">Foto Profil</th>
+              <th className="py-3 px-3">Nomor Plat Kendaraan</th>
               <th className="py-3 px-3 text-right">Aksi</th>
             </tr>
           </thead>
@@ -1032,21 +1032,8 @@ export const AdminMembersPage: React.FC = () => {
                     </td>
                     <td className="py-3 px-3 text-[10px] text-gray-500 font-mono">{m.createdAt ? m.createdAt.slice(0, 10) : '-'}</td>
                     <td className="py-3 px-3 font-mono text-blue-300 text-[11px]">{cleanString(m.email) || '-'}</td>
-                    <td className="py-3 px-3 text-[11px] font-mono text-gray-400 max-w-[140px] truncate">
-                      {m.photoURL ? (
-                        <a
-                          href={m.photoURL}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-emerald-400 hover:underline flex items-center gap-1 font-sans text-[11px]"
-                          title={m.photoURL}
-                        >
-                          <ExternalLink className="w-3 h-3 shrink-0" />
-                          <span className="truncate">{m.photoURL.replace(/^https?:\/\//, '')}</span>
-                        </a>
-                      ) : (
-                        <span className="text-gray-500 font-sans text-[11px]">Tanpa Foto</span>
-                      )}
+                    <td className="py-3 px-3 font-mono text-cyan-300 text-[11px] font-bold uppercase">
+                      {cleanString(m.plateNumber) || '-'}
                     </td>
                     <td className="py-3 px-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">
