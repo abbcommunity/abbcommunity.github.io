@@ -123,7 +123,7 @@ export const memberService = {
   ): Promise<number> {
     const now = new Date().toISOString();
     let totalImported = 0;
-    const chunkSize = 400;
+    const chunkSize = 20; // Micro-batching of 20 items per commit to drive live progress ticker
 
     for (let i = 0; i < items.length; i += chunkSize) {
       const chunk = items.slice(i, i + chunkSize);
@@ -168,6 +168,9 @@ export const memberService = {
       if (onProgress) {
         onProgress(totalImported, items.length);
       }
+      
+      // Micro-pause for smooth UI ticker animation
+      await new Promise((r) => setTimeout(r, 40));
     }
 
     try {
@@ -184,7 +187,7 @@ export const memberService = {
   ): Promise<number> {
     if (!ids || ids.length === 0) return 0;
     
-    const chunkSize = 400;
+    const chunkSize = 20; // Micro-batching of 20 items per commit
     let totalDeleted = 0;
 
     for (let i = 0; i < ids.length; i += chunkSize) {
@@ -210,6 +213,9 @@ export const memberService = {
       if (onProgress) {
         onProgress(totalDeleted, ids.length);
       }
+
+      // Micro-pause for smooth UI ticker animation
+      await new Promise((r) => setTimeout(r, 40));
     }
 
     try {

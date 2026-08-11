@@ -101,12 +101,13 @@ export const AdminMembersPage: React.FC = () => {
     }
 
     setIsDeletingBulk(true);
-    // 1. Status: MENUNGGU PROSES (Loading Delete)
+    const total = selectedIds.length;
+
     setDeleteOpState({
       status: 'loading',
-      message: `⏳ Menunggu proses: Sedang menghapus 0 / ${selectedIds.length} anggota yang dipilih dari Cloud Firestore...`,
+      message: `⏳ Menunggu proses: Sedang menghapus 0 / ${total} anggota dari Cloud Firestore...`,
       importedCount: 0,
-      totalCount: selectedIds.length,
+      totalCount: total,
       progressPercent: 0,
     });
 
@@ -114,20 +115,23 @@ export const AdminMembersPage: React.FC = () => {
       const count = await memberService.bulkDeleteMembers(
         selectedIds,
         user.uid,
-        (deleted, total) => {
-          const percent = Math.round((deleted / total) * 100);
+        (deleted, totalCount) => {
+          const percent = Math.round((deleted / totalCount) * 100);
           setDeleteOpState({
             status: 'loading',
-            message: `⏳ Menunggu proses: Sedang menghapus ${deleted} dari ${total} anggota yang dipilih... (${percent}%)`,
+            message: `⏳ Menunggu proses: Sedang menghapus ${deleted} / ${totalCount} anggota dari Cloud Firestore...`,
+            importedCount: deleted,
+            totalCount: totalCount,
             progressPercent: percent,
           });
         }
       );
 
-      // 2. Status: BERHASIL (Success Delete)
       setDeleteOpState({
         status: 'success',
         message: `✅ BERHASIL: Menghapus ${count} data anggota secara permanen!`,
+        importedCount: count,
+        totalCount: total,
         progressPercent: 100,
       });
 
@@ -135,9 +139,8 @@ export const AdminMembersPage: React.FC = () => {
       setTimeout(() => {
         setDeleteOpState({ status: 'idle', message: '' });
         refetch();
-      }, 2500);
+      }, 2000);
     } catch (err: any) {
-      // 3. Status: GAGAL (Error Delete)
       setDeleteOpState({
         status: 'error',
         message: `❌ GAGAL: Terjadi kesalahan saat menghapus data massal: ${err.message || err}`,
@@ -362,11 +365,12 @@ export const AdminMembersPage: React.FC = () => {
   const handleExecuteBulkImport = async () => {
     if (!user || parsedPreview.length === 0) return;
 
+    const total = parsedPreview.length;
     setImportOpState({
       status: 'loading',
-      message: `⏳ Menunggu proses: Sedang menyimpan 0 / ${parsedPreview.length} data anggota ke Cloud Firestore...`,
+      message: `⏳ Menunggu proses: Sedang menyimpan 0 / ${total} data anggota ke Cloud Firestore...`,
       importedCount: 0,
-      totalCount: parsedPreview.length,
+      totalCount: total,
       progressPercent: 0,
     });
 
@@ -388,13 +392,13 @@ export const AdminMembersPage: React.FC = () => {
       const count = await memberService.bulkImportMembers(
         itemsToImport,
         user.uid,
-        (imported, total) => {
-          const percent = Math.round((imported / total) * 100);
+        (imported, totalCount) => {
+          const percent = Math.round((imported / totalCount) * 100);
           setImportOpState({
             status: 'loading',
-            message: `⏳ Menunggu proses: Sedang menyimpan ${imported} dari ${total} data anggota ke Firestore... (${percent}%)`,
+            message: `⏳ Menunggu proses: Sedang menyimpan ${imported} / ${totalCount} data anggota ke Cloud Firestore...`,
             importedCount: imported,
-            totalCount: total,
+            totalCount: totalCount,
             progressPercent: percent,
           });
         }
@@ -403,6 +407,8 @@ export const AdminMembersPage: React.FC = () => {
       setImportOpState({
         status: 'success',
         message: `✅ BERHASIL: Menyimpan ${count} data anggota ke database Cloud Firestore!`,
+        importedCount: count,
+        totalCount: total,
         progressPercent: 100,
       });
 
@@ -412,7 +418,7 @@ export const AdminMembersPage: React.FC = () => {
         setParsedPreview([]);
         setImportOpState({ status: 'idle', message: '' });
         refetch();
-      }, 1500);
+      }, 1800);
     } catch (err: any) {
       setImportOpState({
         status: 'error',
@@ -487,7 +493,7 @@ export const AdminMembersPage: React.FC = () => {
       {/* Multiple Delete / Main Operation Status Indicator Banner */}
       {deleteOpState.status !== 'idle' && (
         <div
-          className={`p-4 border rounded-2xl space-y-2 text-xs font-semibold transition-all shadow-xl ${
+          className={`p-4 border rounded-2xl space-y-3 text-xs font-semibold transition-all shadow-xl ${
             deleteOpState.status === 'loading'
               ? 'bg-blue-950/80 border-blue-800 text-blue-200 shadow-blue-900/30'
               : deleteOpState.status === 'success'
@@ -517,11 +523,17 @@ export const AdminMembersPage: React.FC = () => {
           </div>
 
           {deleteOpState.status === 'loading' && deleteOpState.progressPercent !== undefined && (
-            <div className="w-full bg-gray-800 rounded-full h-2 overflow-hidden mt-2">
-              <div
-                className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${deleteOpState.progressPercent}%` }}
-              ></div>
+            <div className="space-y-1 mt-2">
+              <div className="flex justify-between items-center text-[11px] font-mono font-bold text-blue-300">
+                <span>Progress Hapus: <strong className="text-white text-xs">{deleteOpState.importedCount || 0} / {deleteOpState.totalCount || 0}</strong> Anggota</span>
+                <span className="text-emerald-400 font-extrabold text-xs">{deleteOpState.progressPercent}%</span>
+              </div>
+              <div className="w-full bg-gray-900 border border-gray-800 rounded-full h-2.5 overflow-hidden p-0.5">
+                <div
+                  className="bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-400 h-1.5 rounded-full transition-all duration-300 shadow-md shadow-emerald-500/30"
+                  style={{ width: `${deleteOpState.progressPercent}%` }}
+                ></div>
+              </div>
             </div>
           )}
         </div>
@@ -889,15 +901,15 @@ export const AdminMembersPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Explicit Operation Status Indicator (Loading / Success / Error) */}
+              {/* Explicit Operation Status Indicator with Animated Counter & Progress Bar */}
               {importOpState.status !== 'idle' && (
                 <div
-                  className={`p-4 border rounded-xl space-y-2 text-xs font-semibold transition-all ${
+                  className={`p-4 border rounded-2xl space-y-3 text-xs font-semibold transition-all shadow-xl ${
                     importOpState.status === 'loading'
-                      ? 'bg-blue-950/70 border-blue-800/80 text-blue-200'
+                      ? 'bg-blue-950/80 border-blue-800 text-blue-200 shadow-blue-900/30'
                       : importOpState.status === 'success'
-                      ? 'bg-emerald-950/80 border-emerald-800 text-emerald-200'
-                      : 'bg-red-950/80 border-red-800 text-red-200'
+                      ? 'bg-emerald-950/80 border-emerald-800 text-emerald-200 shadow-emerald-900/30'
+                      : 'bg-red-950/80 border-red-800 text-red-200 shadow-red-900/30'
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
@@ -913,21 +925,27 @@ export const AdminMembersPage: React.FC = () => {
 
                     <div className="flex-1">
                       <p className="font-bold text-sm">
-                        {importOpState.status === 'loading' && '⏳ MENUNGGU PROSES (Processing...)'}
-                        {importOpState.status === 'success' && '✅ PROSES BERHASIL (Success)'}
-                        {importOpState.status === 'error' && '❌ PROSES GAGAL (Error)'}
+                        {importOpState.status === 'loading' && '⏳ MENUNGGU PROSES IMPOR MASSAL (Processing...)'}
+                        {importOpState.status === 'success' && '✅ PROSES IMPOR BERHASIL (Success)'}
+                        {importOpState.status === 'error' && '❌ PROSES IMPOR GAGAL (Error)'}
                       </p>
                       <p className="mt-0.5 font-normal text-xs">{importOpState.message}</p>
                     </div>
                   </div>
 
-                  {/* Progress bar during loading */}
+                  {/* Animated Counter and Progress Bar */}
                   {importOpState.status === 'loading' && importOpState.progressPercent !== undefined && (
-                    <div className="w-full bg-gray-800 rounded-full h-2 overflow-hidden mt-2">
-                      <div
-                        className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${importOpState.progressPercent}%` }}
-                      ></div>
+                    <div className="space-y-1 mt-2">
+                      <div className="flex justify-between items-center text-[11px] font-mono font-bold text-blue-300">
+                        <span>Progress Menyimpan: <strong className="text-white text-xs font-extrabold">{importOpState.importedCount || 0} / {importOpState.totalCount || 0}</strong> Anggota</span>
+                        <span className="text-emerald-400 font-extrabold text-xs">{importOpState.progressPercent}%</span>
+                      </div>
+                      <div className="w-full bg-gray-900 border border-gray-800 rounded-full h-2.5 overflow-hidden p-0.5">
+                        <div
+                          className="bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-400 h-1.5 rounded-full transition-all duration-300 shadow-md shadow-emerald-500/30"
+                          style={{ width: `${importOpState.progressPercent}%` }}
+                        ></div>
+                      </div>
                     </div>
                   )}
                 </div>
