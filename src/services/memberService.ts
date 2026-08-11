@@ -69,8 +69,32 @@ export const memberService = {
 
     const localDocs = getLocalCustomMembers();
     const finalNikMap = new Map<string, MemberProfile>();
+    const isCleared = typeof window !== 'undefined' && localStorage.getItem('abb_members_cleared') === 'true';
 
-    // 1. Merge local storage custom/imported members and Firestore live members
+    // 1. Seed official base members (ABB001 to ABB082) into finalNikMap (unless explicitly cleared by Admin)
+    if (!isCleared) {
+      membersData.forEach((m, idx) => {
+        const nikStr = m.nik || `ABB${String(idx + 1).padStart(3, '0')}`;
+        const nikKey = normalizeNikKey(nikStr);
+        finalNikMap.set(nikKey, {
+          id: m.id || `m_${idx + 1}`,
+          name: m.name,
+          nik: nikStr,
+          position: m.position || 'Anggota',
+          chapter: m.chapter || 'Bekasi Chapter',
+          joinYear: m.joinYear || 2026,
+          status: 'active',
+          visibility: 'public',
+          motorcycle: { model: m.motorcycle || 'Honda ADV 160 Custom' },
+          photoURL: m.photo,
+          bio: m.bio || '',
+          createdAt: '2026-08-11T00:00:00.000Z',
+          updatedAt: '2026-08-11T00:00:00.000Z',
+        });
+      });
+    }
+
+    // 2. Override/merge with local storage custom/imported members and Firestore live members
     localDocs.concat(firestoreDocs).forEach((doc) => {
       if (doc && doc.name) {
         const nikKey = normalizeNikKey(doc.nik);
@@ -96,29 +120,7 @@ export const memberService = {
       }, 500);
     }
 
-    let combined: MemberProfile[] = Array.from(finalNikMap.values());
-
-    // 3. Fallback to official seed membersData if combined is empty and not explicitly cleared by Admin
-    if (combined.length === 0) {
-      if (typeof window !== 'undefined' && localStorage.getItem('abb_members_cleared') === 'true') {
-        return [];
-      }
-      combined = membersData.map((m, idx) => ({
-        id: m.id,
-        name: m.name,
-        nik: m.nik || `ABB${String(idx + 1).padStart(3, '0')}`,
-        position: m.position,
-        chapter: m.chapter,
-        joinYear: m.joinYear,
-        status: 'active',
-        visibility: 'public',
-        motorcycle: { model: m.motorcycle },
-        photoURL: m.photo,
-        bio: m.bio,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }));
-    }
+    const combined: MemberProfile[] = Array.from(finalNikMap.values());
 
     // Helper to extract numeric value from NIK string (e.g., 'ABB001' -> 1, 'ABB082' -> 82)
     const extractNikNumber = (nikStr?: string | null): number => {
