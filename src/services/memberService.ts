@@ -120,12 +120,11 @@ export const memberService = {
 
   async bulkImportMembers(
     items: Omit<MemberProfile, 'id' | 'createdAt' | 'updatedAt'>[],
-    actorId: string
+    actorId: string,
+    onProgress?: (imported: number, total: number) => void
   ): Promise<number> {
     const now = new Date().toISOString();
     let totalImported = 0;
-
-    // Process in batches of 400 (Firestore max limit per batch is 500)
     const chunkSize = 400;
 
     for (let i = 0; i < items.length; i += chunkSize) {
@@ -159,16 +158,22 @@ export const memberService = {
       }
 
       await batch.commit();
+      if (onProgress) {
+        onProgress(totalImported, items.length);
+      }
     }
 
     await auditLogService.logAction(actorId, 'BULK_MEMBERS_IMPORTED', 'members', 'batch', { count: totalImported });
     return totalImported;
   },
 
-  async bulkDeleteMembers(ids: string[], actorId: string): Promise<number> {
+  async bulkDeleteMembers(
+    ids: string[],
+    actorId: string,
+    onProgress?: (deleted: number, total: number) => void
+  ): Promise<number> {
     if (!ids || ids.length === 0) return 0;
     
-    // Process in chunks of 400
     const chunkSize = 400;
     let totalDeleted = 0;
 
@@ -183,6 +188,9 @@ export const memberService = {
 
       await batch.commit();
       totalDeleted += chunk.length;
+      if (onProgress) {
+        onProgress(totalDeleted, ids.length);
+      }
     }
 
     try {

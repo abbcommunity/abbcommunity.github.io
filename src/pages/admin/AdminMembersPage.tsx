@@ -1,11 +1,32 @@
 import React, { useState } from 'react';
-import { Users, Plus, Search, Trash2, FileSpreadsheet, Upload, CheckCircle, Download } from 'lucide-react';
+import {
+  Users,
+  Plus,
+  Search,
+  Trash2,
+  FileSpreadsheet,
+  Upload,
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  Download,
+  Clock,
+  AlertCircle
+} from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useMembers } from '../../hooks/useMembers';
 import { memberService } from '../../services/memberService';
 import { useAuth } from '../../hooks/useAuth';
 import { MemberProfile } from '../../types/backend';
 import { convertGoogleDriveUrl, getAvatarUrl } from '../../utils/imageUtils';
+
+interface OperationState {
+  status: 'idle' | 'loading' | 'success' | 'error';
+  message: string;
+  importedCount?: number;
+  totalCount?: number;
+  progressPercent?: number;
+}
 
 export const AdminMembersPage: React.FC = () => {
   const { members, loading, refetch } = useMembers(true);
@@ -15,6 +36,12 @@ export const AdminMembersPage: React.FC = () => {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeletingBulk, setIsDeletingBulk] = useState(false);
+
+  // Status state for Bulk Import
+  const [importOpState, setImportOpState] = useState<OperationState>({
+    status: 'idle',
+    message: '',
+  });
 
   // Form single member state
   const [formData, setFormData] = useState({
@@ -34,7 +61,6 @@ export const AdminMembersPage: React.FC = () => {
   // Bulk import state
   const [pastedData, setPastedData] = useState('');
   const [parsedPreview, setParsedPreview] = useState<Partial<MemberProfile>[]>([]);
-  const [importStatus, setImportStatus] = useState<string | null>(null);
 
   const filteredMembers = members.filter((m) =>
     m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -128,6 +154,7 @@ export const AdminMembersPage: React.FC = () => {
     setPastedData(text);
     if (!text.trim()) {
       setParsedPreview([]);
+      setImportOpState({ status: 'idle', message: '' });
       return;
     }
 
@@ -138,7 +165,6 @@ export const AdminMembersPage: React.FC = () => {
     const headerLine = lines[0];
     const headerCols = headerLine.split(headerLine.includes('\t') ? '\t' : ',').map((h) => h.trim().toLowerCase());
     
-    // Check if line 0 is a header line
     const isHeaderLine =
       headerCols.some(h => h.includes('nama')) ||
       headerCols.some(h => h.includes('email')) ||
@@ -166,7 +192,6 @@ export const AdminMembersPage: React.FC = () => {
       let rawPhotoURL = '';
 
       if (isHeaderLine) {
-        // Dynamic Header-based Mapping
         headerCols.forEach((h, colIdx) => {
           const val = cols[colIdx] || '';
           if (h.includes('nama')) name = val;
@@ -185,7 +210,6 @@ export const AdminMembersPage: React.FC = () => {
           else if (h.includes('foto') || h.includes('profil') || h.includes('drive')) rawPhotoURL = val;
         });
       } else {
-        // Positional Mapping matching 10-column template:
         name = cols[0] || '';
         const kontakCol = cols[1] || '';
         if (kontakCol.includes('@')) email = kontakCol;
@@ -206,7 +230,6 @@ export const AdminMembersPage: React.FC = () => {
         rawPhotoURL = cols[9] || cols[4] || '';
       }
 
-      // Convert Google Drive links automatically
       const photoURL = convertGoogleDriveUrl(rawPhotoURL);
 
       if (name || email || nik) {
@@ -227,6 +250,7 @@ export const AdminMembersPage: React.FC = () => {
     }
 
     setParsedPreview(parsed);
+    setImportOpState({ status: 'idle', message: '' });
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -235,7 +259,6 @@ export const AdminMembersPage: React.FC = () => {
 
     const fileName = file.name.toLowerCase();
 
-    // Native Excel (.xlsx / .xls) parsing via SheetJS
     if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
       const reader = new FileReader();
       reader.onload = (evt) => {
@@ -247,12 +270,14 @@ export const AdminMembersPage: React.FC = () => {
           const csvText = XLSX.utils.sheet_to_csv(worksheet);
           parsePastedExcelCSV(csvText);
         } catch (err: any) {
-          alert('Gagal membaca file Excel (.xlsx): ' + err.message);
+          setImportOpState({
+            status: 'error',
+            message: 'Gagal membaca file Excel (.xlsx): ' + (err.message || err),
+          });
         }
       };
       reader.readAsArrayBuffer(file);
     } else {
-      // Standard CSV / TXT parsing
       const reader = new FileReader();
       reader.onload = (evt) => {
         const content = evt.target?.result as string;
@@ -266,7 +291,16 @@ export const AdminMembersPage: React.FC = () => {
 
   const handleExecuteBulkImport = async () => {
     if (!user || parsedPreview.length === 0) return;
-    setImportStatus('Memproses import massal ke Firestore...');
+
+    // 1. Status: MENUNGGU PROSES (Loading)
+    setImportOpState({
+      status: 'loading',
+      message: `⏳ Menunggu proses: Sedang menyimpan 0 / ${parsedPreview.length} data anggota ke Cloud Firestore...`,
+      importedCount: 0,
+      totalCount: parsedPreview.length,
+      progressPercent: 0,
+    });
+
     try {
       const itemsToImport = parsedPreview.map((item) => ({
         name: item.name || 'Anggota ABB',
@@ -282,17 +316,41 @@ export const AdminMembersPage: React.FC = () => {
         visibility: 'public' as const,
       }));
 
-      const count = await memberService.bulkImportMembers(itemsToImport, user.uid);
-      setImportStatus(`Berhasil mengimpor ${count} data anggota dari Excel/CSV!`);
+      const count = await memberService.bulkImportMembers(
+        itemsToImport,
+        user.uid,
+        (imported, total) => {
+          const percent = Math.round((imported / total) * 100);
+          setImportOpState({
+            status: 'loading',
+            message: `⏳ Menunggu proses: Sedang menyimpan ${imported} dari ${total} data anggota ke Firestore... (${percent}%)`,
+            importedCount: imported,
+            totalCount: total,
+            progressPercent: percent,
+          });
+        }
+      );
+
+      // 2. Status: BERHASIL (Success)
+      setImportOpState({
+        status: 'success',
+        message: `✅ BERHASIL: Menyimpan ${count} data anggota ke database Cloud Firestore!`,
+        progressPercent: 100,
+      });
+
       setTimeout(() => {
         setIsImportModalOpen(false);
         setPastedData('');
         setParsedPreview([]);
-        setImportStatus(null);
+        setImportOpState({ status: 'idle', message: '' });
         refetch();
-      }, 1200);
+      }, 1500);
     } catch (err: any) {
-      setImportStatus(`Gagal import: ${err.message || err}`);
+      // 3. Status: GAGAL (Error)
+      setImportOpState({
+        status: 'error',
+        message: `❌ GAGAL: Terjadi kesalahan saat menyimpan data: ${err.message || err}`,
+      });
     }
   };
 
@@ -587,7 +645,8 @@ export const AdminMembersPage: React.FC = () => {
               </h3>
               <button
                 onClick={() => setIsImportModalOpen(false)}
-                className="text-gray-400 hover:text-white text-xs font-bold"
+                disabled={importOpState.status === 'loading'}
+                className="text-gray-400 hover:text-white text-xs font-bold disabled:opacity-50"
               >
                 Tutup ✕
               </button>
@@ -625,8 +684,9 @@ export const AdminMembersPage: React.FC = () => {
                 <input
                   type="file"
                   accept=".xlsx,.xls,.csv,.txt"
+                  disabled={importOpState.status === 'loading'}
                   onChange={handleFileUpload}
-                  className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2 text-gray-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-950 file:text-emerald-400 hover:file:bg-emerald-900"
+                  className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2 text-gray-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-950 file:text-emerald-400 hover:file:bg-emerald-900 disabled:opacity-50"
                 />
                 <p className="text-[10px] text-gray-400 mt-1">✓ Mendukung file Excel (.xlsx / .xls) dan CSV secara langsung tanpa perlu convert.</p>
               </div>
@@ -636,10 +696,11 @@ export const AdminMembersPage: React.FC = () => {
                 <label className="block text-gray-300 font-semibold mb-1">Opsi 2: Salin-Tempel Baris dari Excel (Copy-Paste)</label>
                 <textarea
                   rows={4}
+                  disabled={importOpState.status === 'loading'}
                   placeholder="Tempelkan baris dari Excel di sini..."
                   value={pastedData}
                   onChange={(e) => parsePastedExcelCSV(e.target.value)}
-                  className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-3 text-white font-mono text-[11px] focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-3 text-white font-mono text-[11px] focus:outline-none focus:border-emerald-500 disabled:opacity-50"
                 ></textarea>
               </div>
 
@@ -686,14 +747,47 @@ export const AdminMembersPage: React.FC = () => {
                 </div>
               )}
 
-              {importStatus && (
-                <div className={`p-3 border rounded-xl text-xs font-semibold flex items-center gap-2 ${
-                  importStatus.startsWith('Gagal')
-                    ? 'bg-red-950/80 border-red-800 text-red-300'
-                    : 'bg-emerald-950/80 border-emerald-800 text-emerald-300'
-                }`}>
-                  <CheckCircle className={`w-4 h-4 shrink-0 ${importStatus.startsWith('Gagal') ? 'text-red-400' : 'text-emerald-400'}`} />
-                  {importStatus}
+              {/* Explicit Operation Status Indicator (Loading / Success / Error) */}
+              {importOpState.status !== 'idle' && (
+                <div
+                  className={`p-4 border rounded-xl space-y-2 text-xs font-semibold transition-all ${
+                    importOpState.status === 'loading'
+                      ? 'bg-blue-950/70 border-blue-800/80 text-blue-200'
+                      : importOpState.status === 'success'
+                      ? 'bg-emerald-950/80 border-emerald-800 text-emerald-200'
+                      : 'bg-red-950/80 border-red-800 text-red-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    {importOpState.status === 'loading' && (
+                      <Loader2 className="w-5 h-5 text-blue-400 animate-spin shrink-0" />
+                    )}
+                    {importOpState.status === 'success' && (
+                      <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                    )}
+                    {importOpState.status === 'error' && (
+                      <XCircle className="w-5 h-5 text-red-400 shrink-0" />
+                    )}
+
+                    <div className="flex-1">
+                      <p className="font-bold text-sm">
+                        {importOpState.status === 'loading' && '⏳ MENUNGGU PROSES (Processing...)'}
+                        {importOpState.status === 'success' && '✅ PROSES BERHASIL (Success)'}
+                        {importOpState.status === 'error' && '❌ PROSES GAGAL (Error)'}
+                      </p>
+                      <p className="mt-0.5 font-normal text-xs">{importOpState.message}</p>
+                    </div>
+                  </div>
+
+                  {/* Progress bar during loading */}
+                  {importOpState.status === 'loading' && importOpState.progressPercent !== undefined && (
+                    <div className="w-full bg-gray-800 rounded-full h-2 overflow-hidden mt-2">
+                      <div
+                        className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${importOpState.progressPercent}%` }}
+                      ></div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -701,18 +795,27 @@ export const AdminMembersPage: React.FC = () => {
             <div className="flex justify-end gap-2 pt-3 border-t border-gray-800">
               <button
                 type="button"
+                disabled={importOpState.status === 'loading'}
                 onClick={() => setIsImportModalOpen(false)}
-                className="px-4 py-2 bg-gray-800 text-gray-300 rounded-xl text-xs"
+                className="px-4 py-2 bg-gray-800 text-gray-300 rounded-xl text-xs disabled:opacity-50"
               >
                 Batal
               </button>
               <button
                 type="button"
-                disabled={parsedPreview.length === 0}
+                disabled={parsedPreview.length === 0 || importOpState.status === 'loading'}
                 onClick={handleExecuteBulkImport}
                 className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs shadow-lg shadow-emerald-600/20 flex items-center gap-2"
               >
-                <Upload className="w-4 h-4" /> Impor {parsedPreview.length} Anggota ke Database
+                {importOpState.status === 'loading' ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" /> Memproses...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4" /> Impor {parsedPreview.length} Anggota ke Database
+                  </>
+                )}
               </button>
             </div>
           </div>
