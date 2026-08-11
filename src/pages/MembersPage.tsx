@@ -47,10 +47,12 @@ export const MembersPage: React.FC = () => {
       return a.name.localeCompare(b.name);
     });
 
-  // Deduplicate by NIK so each member number (ABB001, ABB002, etc.) appears EXACTLY ONCE
+  // Deduplicate by NIK or Name so each member card appears EXACTLY ONCE without repetition
   const uniqueNikMap = new Map<string, typeof displayMembersList[0]>();
   displayMembersList.forEach((m) => {
-    const key = m.nik !== '-' ? m.nik.toUpperCase() : m.id;
+    const nikKey = m.nik && m.nik !== '-' ? m.nik.toUpperCase().trim() : '';
+    const nameKey = m.name ? m.name.toLowerCase().trim() : '';
+    const key = nikKey || nameKey || m.id;
     if (!uniqueNikMap.has(key)) {
       uniqueNikMap.set(key, m);
     }

@@ -70,27 +70,19 @@ export const memberService = {
     const localDocs = getLocalCustomMembers();
     const finalNikMap = new Map<string, MemberProfile>();
 
-    // 1. Merge local storage custom/imported members
-    localDocs.forEach((doc) => {
-      if (doc) {
-        const nikKey = normalizeNikKey(doc.nik) || doc.id;
-        if (nikKey) {
-          finalNikMap.set(nikKey, doc);
+    // 1. Merge local storage custom/imported members and Firestore live members
+    localDocs.concat(firestoreDocs).forEach((doc) => {
+      if (doc && doc.name) {
+        const nikKey = normalizeNikKey(doc.nik);
+        const nameKey = doc.name.trim().toLowerCase();
+        const key = nikKey || nameKey || doc.id;
+        if (key) {
+          finalNikMap.set(key, doc);
         }
       }
     });
 
-    // 2. Merge Firestore live members
-    firestoreDocs.forEach((doc) => {
-      if (doc) {
-        const nikKey = normalizeNikKey(doc.nik) || doc.id;
-        if (nikKey) {
-          finalNikMap.set(nikKey, doc);
-        }
-      }
-    });
-
-    let combined = Array.from(finalNikMap.values());
+    let combined: MemberProfile[] = Array.from(finalNikMap.values());
 
     // 3. Fallback to official seed membersData if combined is empty and not explicitly cleared by Admin
     if (combined.length === 0) {
