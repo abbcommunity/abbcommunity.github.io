@@ -870,7 +870,12 @@ export const AdminMembersPage: React.FC = () => {
               </tr>
             ) : filteredMembers.length === 0 ? (
               <tr>
-                <td colSpan={11} className="py-8 text-center text-gray-500">Tidak ada anggota yang cocok.</td>
+                <td colSpan={11} className="py-12 text-center space-y-2">
+                  <p className="text-gray-300 font-bold text-sm">Belum Ada Data Anggota di Database</p>
+                  <p className="text-gray-500 text-xs">
+                    Klik tombol <strong className="text-emerald-400">"Import Excel (.xlsx) / CSV"</strong> di atas untuk mengunggah file Excel anggota Anda.
+                  </p>
+                </td>
               </tr>
             ) : (
               filteredMembers.map((m) => {

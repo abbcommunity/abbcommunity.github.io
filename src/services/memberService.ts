@@ -70,50 +70,25 @@ export const memberService = {
     const localDocs = getLocalCustomMembers();
     const finalNikMap = new Map<string, MemberProfile>();
 
-    const hasRealData = localDocs.length > 0 || firestoreDocs.length > 0;
-
-    if (!hasRealData) {
-      // Fallback to static base members ONLY if database is 100% empty
-      membersData.forEach((m, idx) => {
-        const rawNik = m.nik || `ABB${String(idx + 1).padStart(3, '0')}`;
-        const nikKey = normalizeNikKey(rawNik) || m.id;
-        finalNikMap.set(nikKey, {
-          id: m.id,
-          name: m.name,
-          nik: rawNik,
-          position: m.position,
-          chapter: m.chapter,
-          joinYear: m.joinYear,
-          status: 'active',
-          visibility: 'public',
-          motorcycle: { model: m.motorcycle },
-          photoURL: m.photo,
-          bio: m.bio,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
-      });
-    } else {
-      // Merge local storage custom/imported members
-      localDocs.forEach((doc) => {
-        if (doc) {
-          const nikKey = normalizeNikKey(doc.nik) || doc.id;
-          if (nikKey) {
-            finalNikMap.set(nikKey, doc);
-          }
+    // 1. Merge local storage custom/imported members
+    localDocs.forEach((doc) => {
+      if (doc) {
+        const nikKey = normalizeNikKey(doc.nik) || doc.id;
+        if (nikKey) {
+          finalNikMap.set(nikKey, doc);
         }
-      });
+      }
+    });
 
-      // Merge Firestore live members
-      firestoreDocs.forEach((doc) => {
-        if (doc) {
-          const nikKey = normalizeNikKey(doc.nik) || doc.id;
-          if (nikKey) {
-            finalNikMap.set(nikKey, doc);
-          }
+    // 2. Merge Firestore live members
+    firestoreDocs.forEach((doc) => {
+      if (doc) {
+        const nikKey = normalizeNikKey(doc.nik) || doc.id;
+        if (nikKey) {
+          finalNikMap.set(nikKey, doc);
         }
-      });
-    }
+      }
+    });
 
     const combined = Array.from(finalNikMap.values());
 
