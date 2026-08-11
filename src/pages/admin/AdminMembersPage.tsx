@@ -234,7 +234,7 @@ export const AdminMembersPage: React.FC = () => {
 
   const handleSaveMember = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    const actorId = user ? user.uid : 'admin_super';
     try {
       const payload = {
         name: cleanString(formData.name),
@@ -253,14 +253,14 @@ export const AdminMembersPage: React.FC = () => {
       };
 
       if (editingMemberId) {
-        await memberService.updateMember(editingMemberId, payload, user.uid);
+        await memberService.updateMember(editingMemberId, payload, actorId);
       } else {
-        await memberService.createMember(payload, user.uid);
+        await memberService.createMember(payload, actorId);
       }
 
       setIsModalOpen(false);
       setEditingMemberId(null);
-      refetch();
+      await refetch();
     } catch (err: any) {
       alert('Gagal menyimpan data anggota: ' + (err.message || err));
     }

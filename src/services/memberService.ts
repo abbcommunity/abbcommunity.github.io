@@ -294,13 +294,46 @@ export const memberService = {
     });
 
     const existing = getLocalCustomMembers();
-    const updatedLocal = existing.map((m) => (m.id === id ? { ...m, ...updatedFields } : m));
+    const targetNikKey = updates.nik ? normalizeNikKey(updates.nik) : normalizeNikKey(id);
+
+    let found = false;
+    const updatedLocal = existing.map((m) => {
+      const isIdMatch = m.id === id;
+      const isNikMatch = targetNikKey && m.nik && normalizeNikKey(m.nik) === targetNikKey;
+      if (isIdMatch || isNikMatch) {
+        found = true;
+        return { ...m, ...updatedFields, id: m.id || id };
+      }
+      return m;
+    });
+
+    if (!found) {
+      updatedLocal.push({
+        id: id,
+        name: updates.name || 'Anggota ABB',
+        email: updates.email || '',
+        phone: updates.phone || '',
+        address: updates.address || '',
+        nik: updates.nik || '',
+        position: updates.position || 'Anggota',
+        chapter: updates.chapter || 'Bekasi Chapter',
+        joinYear: updates.joinYear || 2026,
+        status: updates.status || 'active',
+        visibility: updates.visibility || 'public',
+        createdAt: now,
+        ...updatedFields,
+      });
+    }
+
     saveLocalCustomMembers(updatedLocal);
 
     try {
       const docRef = doc(db, COLLECTION_NAME, id);
-      await updateDoc(docRef, updatedFields);
-      await auditLogService.logAction(actorId, 'MEMBER_UPDATED', 'members', id, updates);
+      await updateDoc(docRef, updatedFields).catch(async () => {
+        // Fallback to setDoc if doc doesn't exist in Firestore yet
+        await setDoc(docRef, sanitizeForFirestore({ ...updatedFields, id }));
+      });
+      await auditLogService.logAction(actorId, 'MEMBER_UPDATED', 'members', id, updates).catch(() => null);
     } catch (err) {
       console.warn('⚠️ Firestore update member background sync note:', err);
     }
