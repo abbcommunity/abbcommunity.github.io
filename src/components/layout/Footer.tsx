@@ -114,7 +114,7 @@ export const Footer: React.FC = () => {
           <p className="flex items-center gap-1">
             <span>Built with</span>
             <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500 inline" />
-            <span>by ABB Community Digital Team</span>
+            <span>by Administrator Roby Viori Fansya</span>
           </p>
         </div>
       </div>
