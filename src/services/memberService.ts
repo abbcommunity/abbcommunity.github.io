@@ -48,6 +48,11 @@ const sanitizeForFirestore = <T extends Record<string, any>>(obj: T): T => {
   return cleaned as T;
 };
 
+const normalizeNikKey = (nikStr?: string | null): string => {
+  if (!nikStr) return '';
+  return nikStr.trim().replace(/^['"]+/, '').replace(/['"]+$/, '').toUpperCase();
+};
+
 export const memberService = {
   async getAllMembers(includePrivate = false): Promise<MemberProfile[]> {
     let firestoreDocs: MemberProfile[] = [];
@@ -62,14 +67,16 @@ export const memberService = {
     }
 
     const localDocs = getLocalCustomMembers();
-    const combinedMap = new Map<string, MemberProfile>();
+    const finalNikMap = new Map<string, MemberProfile>();
 
-    // 1. Add static base members first (Adipta, Fatwa, Doyok, etc.)
+    // 1. Add static base members first (placeholder entries)
     membersData.forEach((m, idx) => {
-      combinedMap.set(m.id, {
+      const rawNik = m.nik || `ABB${String(idx + 1).padStart(3, '0')}`;
+      const nikKey = normalizeNikKey(rawNik) || m.id;
+      finalNikMap.set(nikKey, {
         id: m.id,
         name: m.name,
-        nik: m.nik || `ABB${String(idx + 1).padStart(3, '0')}`,
+        nik: rawNik,
         position: m.position,
         chapter: m.chapter,
         joinYear: m.joinYear,
@@ -83,21 +90,27 @@ export const memberService = {
       });
     });
 
-    // 2. Merge local storage custom/imported members (so all 82 imported members persist 100%)
+    // 2. Merge local storage custom/imported members (imported docs override static placeholders for matching NIK)
     localDocs.forEach((doc) => {
-      if (doc && doc.id) {
-        combinedMap.set(doc.id, doc);
+      if (doc) {
+        const nikKey = normalizeNikKey(doc.nik) || doc.id;
+        if (nikKey) {
+          finalNikMap.set(nikKey, doc);
+        }
       }
     });
 
-    // 3. Merge Firestore live members
+    // 3. Merge Firestore live members (overrides matching NIK)
     firestoreDocs.forEach((doc) => {
-      if (doc && doc.id) {
-        combinedMap.set(doc.id, doc);
+      if (doc) {
+        const nikKey = normalizeNikKey(doc.nik) || doc.id;
+        if (nikKey) {
+          finalNikMap.set(nikKey, doc);
+        }
       }
     });
 
-    const combined = Array.from(combinedMap.values());
+    const combined = Array.from(finalNikMap.values());
 
     // Helper to extract numeric value from NIK string (e.g., 'ABB001' -> 1, 'ABB082' -> 82)
     const extractNikNumber = (nikStr?: string | null): number => {

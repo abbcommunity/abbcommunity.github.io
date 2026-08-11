@@ -49,7 +49,7 @@ export const MembersPage: React.FC = () => {
     return match ? parseInt(match[0], 10) : 999999;
   };
 
-  const displayMembers = rawList
+  const displayMembersList = rawList
     .map((m) => ({
       id: m.id,
       name: cleanString(m.name) || 'Anggota ABB',
@@ -63,6 +63,17 @@ export const MembersPage: React.FC = () => {
       if (numA !== numB) return numA - numB;
       return a.name.localeCompare(b.name);
     });
+
+  // Deduplicate by NIK so each member number (ABB001, ABB002, etc.) appears EXACTLY ONCE
+  const uniqueNikMap = new Map<string, typeof displayMembersList[0]>();
+  displayMembersList.forEach((m) => {
+    const key = m.nik !== '-' ? m.nik.toUpperCase() : m.id;
+    if (!uniqueNikMap.has(key)) {
+      uniqueNikMap.set(key, m);
+    }
+  });
+
+  const displayMembers = Array.from(uniqueNikMap.values());
 
   const filteredMembers = displayMembers.filter((m) => {
     if (!searchTerm.trim()) return true;
