@@ -2,26 +2,27 @@ import React, { useState } from 'react';
 import { Badge } from '../components/ui/Badge';
 import { Card } from '../components/ui/Card';
 import { Modal } from '../components/ui/Modal';
-import { membersData } from '../data/members';
-import { Member } from '../types';
-import { Search, MapPin, Bike, Calendar, Instagram, Mail } from 'lucide-react';
+import { useMembers } from '../hooks/useMembers';
+import { MemberProfile } from '../types/backend';
+import { Search, IdCard, UserCheck, ShieldCheck, Loader2 } from 'lucide-react';
 import { getAvatarUrl, handleAvatarError } from '../utils/imageUtils';
 
 export const MembersPage: React.FC = () => {
+  const { members, loading } = useMembers(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedRole, setSelectedRole] = useState<string>('all');
-  const [selectedChapter, setSelectedChapter] = useState<string>('all');
-  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [selectedMember, setSelectedMember] = useState<MemberProfile | null>(null);
 
-  const chapters = Array.from(new Set(membersData.map(m => m.chapter)));
+  const cleanString = (val?: string | null): string => {
+    if (!val) return '';
+    return val.trim().replace(/^['"]+/, '').replace(/['"]+$/, '').replace(/^'/, '');
+  };
 
-  const filteredMembers = membersData.filter(m => {
-    const matchesSearch = m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          m.position.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          m.motorcycle.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = selectedRole === 'all' || m.role === selectedRole;
-    const matchesChapter = selectedChapter === 'all' || m.chapter === selectedChapter;
-    return matchesSearch && matchesRole && matchesChapter;
+  const filteredMembers = members.filter((m) => {
+    const term = searchTerm.toLowerCase();
+    const name = cleanString(m.name).toLowerCase();
+    const nik = cleanString(m.nik).toLowerCase();
+    const position = (m.position || '').toLowerCase();
+    return name.includes(term) || nik.includes(term) || position.includes(term);
   });
 
   return (
@@ -33,135 +34,117 @@ export const MembersPage: React.FC = () => {
           Member Directory ABB
         </h1>
         <p className="text-base text-gray-300">
-          Direktori resmi pengurus, founder, dan anggota ABB Community dari seluruh chapter Indonesia.
+          Direktori resmi anggota komunitas ABB Community. Pencarian berdasarkan Nama, Nomor Anggota/NIK, dan Jabatan.
         </p>
       </div>
 
-      {/* Filter Bar */}
-      <div className="bg-[#111827]/80 backdrop-blur-xl border border-gray-800 p-4 rounded-2xl flex flex-col md:flex-row gap-4 items-center justify-between">
-        {/* Search Input */}
-        <div className="relative w-full md:w-80">
+      {/* Search Bar */}
+      <div className="bg-[#111827]/80 backdrop-blur-xl border border-gray-800 p-4 rounded-2xl flex items-center justify-between max-w-2xl mx-auto shadow-xl">
+        <div className="relative w-full">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Cari nama, jabatan, motor..."
-            className="w-full bg-[#0B0F17] text-white pl-10 pr-4 py-2 rounded-xl border border-gray-700 text-xs focus:outline-none focus:border-blue-500"
+            placeholder="Cari berdasarkan nama, Nomor Anggota/NIK, atau jabatan..."
+            className="w-full bg-[#0B0F17] text-white pl-10 pr-4 py-2.5 rounded-xl border border-gray-700 text-xs focus:outline-none focus:border-blue-500 font-sans"
           />
-        </div>
-
-        {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          <select
-            value={selectedRole}
-            onChange={(e) => setSelectedRole(e.target.value)}
-            className="bg-[#0B0F17] text-gray-300 text-xs px-3 py-2 rounded-xl border border-gray-700 focus:outline-none focus:border-blue-500"
-          >
-            <option value="all">Semua Peran</option>
-            <option value="board">Pengurus (Board)</option>
-            <option value="founder">Founder</option>
-            <option value="creative">Creative Squad</option>
-            <option value="member">Anggota</option>
-          </select>
-
-          <select
-            value={selectedChapter}
-            onChange={(e) => setSelectedChapter(e.target.value)}
-            className="bg-[#0B0F17] text-gray-300 text-xs px-3 py-2 rounded-xl border border-gray-700 focus:outline-none focus:border-blue-500"
-          >
-            <option value="all">Semua Chapter</option>
-            {chapters.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
         </div>
       </div>
 
       {/* Member Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {filteredMembers.map((m) => (
-          <Card
-            key={m.id}
-            onClick={() => setSelectedMember(m)}
-            className="p-6 cursor-pointer flex flex-col items-center text-center group"
-          >
-            <img
-              src={getAvatarUrl(m.photo, m.name)}
-              alt={m.name}
-              onError={(e) => handleAvatarError(e, m.photo, m.name)}
-              className="w-24 h-24 rounded-full object-cover border-2 border-blue-500/40 group-hover:border-blue-400 transition-colors shadow-lg mb-4 bg-gray-800"
-            />
-            <h3 className="text-base font-bold text-white font-display group-hover:text-blue-400 transition-colors">
-              {m.name}
-            </h3>
-            <span className="text-xs font-semibold text-blue-400 mt-1">{m.position}</span>
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-16 space-y-3 text-gray-400">
+          <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+          <p className="text-xs">Memuat direktori anggota ABB...</p>
+        </div>
+      ) : filteredMembers.length === 0 ? (
+        <div className="text-center py-16 text-gray-500 text-sm">
+          Tidak ada anggota yang cocok dengan pencarian "{searchTerm}".
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {filteredMembers.map((m) => {
+            const cleanName = cleanString(m.name) || 'Anggota ABB';
+            const cleanNik = cleanString(m.nik) || '-';
+            const position = m.position || 'Anggota';
 
-            <div className="w-full pt-4 mt-4 border-t border-gray-800/80 space-y-1.5 text-xs text-gray-400 text-left">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-3.5 h-3.5 text-gray-500 shrink-0" />
-                <span>{m.chapter}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Bike className="w-3.5 h-3.5 text-gray-500 shrink-0" />
-                <span className="truncate">{m.motorcycle}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Calendar className="w-3.5 h-3.5 text-gray-500 shrink-0" />
-                <span>Join {m.joinYear}</span>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
+            return (
+              <Card
+                key={m.id}
+                onClick={() => setSelectedMember(m)}
+                className="p-6 cursor-pointer flex flex-col items-center text-center group hover:border-blue-500/50 transition-all duration-300 shadow-lg relative overflow-hidden bg-[#101622]"
+              >
+                {/* Avatar Photo */}
+                <div className="relative mb-4">
+                  <img
+                    src={getAvatarUrl(m.photoURL, cleanName)}
+                    alt={cleanName}
+                    onError={(e) => handleAvatarError(e, m.photoURL, cleanName)}
+                    className="w-24 h-24 rounded-full object-cover border-2 border-blue-500/40 group-hover:border-blue-400 transition-colors shadow-xl bg-gray-800"
+                  />
+                  <span className="absolute bottom-0 right-0 bg-blue-600 text-white p-1 rounded-full border-2 border-gray-900 shadow">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                  </span>
+                </div>
 
-      {/* Detail Modal */}
+                {/* 1. Nama Anggota */}
+                <h3 className="text-base font-bold text-white font-display group-hover:text-blue-400 transition-colors line-clamp-1">
+                  {cleanName}
+                </h3>
+
+                {/* 2. Jabatan */}
+                <p className="text-xs font-semibold text-blue-400 mt-1 flex items-center gap-1">
+                  <UserCheck className="w-3.5 h-3.5 shrink-0" />
+                  <span>{position}</span>
+                </p>
+
+                {/* 3. Nomor Anggota / NIK */}
+                <div className="mt-4 pt-3 w-full border-t border-gray-800/80 flex items-center justify-center gap-1.5 text-xs">
+                  <IdCard className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span className="text-gray-400 font-mono text-[11px]">No. Anggota:</span>
+                  <span className="font-mono font-extrabold text-emerald-400 text-xs bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/40">
+                    {cleanNik}
+                  </span>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Simple Detail Modal showing ONLY Photo, Name, NIK, & Position */}
       {selectedMember && (
-        <Modal isOpen={!!selectedMember} onClose={() => setSelectedMember(null)} maxWidth="md">
-          <div className="space-y-6 text-center">
-            <img
-              src={getAvatarUrl(selectedMember.photo, selectedMember.name)}
-              alt={selectedMember.name}
-              className="w-28 h-28 rounded-full object-cover mx-auto border-4 border-blue-600 shadow-xl bg-gray-800"
-            />
-            <div>
-              <h3 className="text-2xl font-bold text-white font-display">{selectedMember.name}</h3>
-              <span className="text-sm font-semibold text-blue-400">{selectedMember.position}</span>
+        <Modal isOpen={!!selectedMember} onClose={() => setSelectedMember(null)} maxWidth="sm">
+          <div className="space-y-6 text-center py-2">
+            <div className="relative inline-block mx-auto">
+              <img
+                src={getAvatarUrl(selectedMember.photoURL, cleanString(selectedMember.name))}
+                alt={cleanString(selectedMember.name)}
+                onError={(e) => handleAvatarError(e, selectedMember.photoURL, cleanString(selectedMember.name))}
+                className="w-28 h-28 rounded-full object-cover mx-auto border-4 border-blue-500 shadow-2xl bg-gray-800"
+              />
+              <span className="absolute bottom-1 right-1 bg-emerald-500 text-white p-1.5 rounded-full border-2 border-gray-900 shadow">
+                <ShieldCheck className="w-4 h-4" />
+              </span>
             </div>
 
-            <div className="bg-[#0B0F17] p-4 rounded-xl border border-gray-800 text-left space-y-2 text-xs text-gray-300">
-              <div className="flex justify-between">
-                <span className="text-gray-500">Chapter:</span>
-                <span className="font-semibold text-white">{selectedMember.chapter}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Motorcycle:</span>
-                <span className="font-semibold text-white">{selectedMember.motorcycle}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Bergabung Sejak:</span>
-                <span className="font-semibold text-white">{selectedMember.joinYear}</span>
-              </div>
-            </div>
-
-            {selectedMember.bio && (
-              <p className="text-xs text-gray-300 leading-relaxed italic bg-gray-900/50 p-3 rounded-lg border border-gray-800">
-                "{selectedMember.bio}"
+            <div className="space-y-1">
+              <h3 className="text-xl font-extrabold text-white font-display">
+                {cleanString(selectedMember.name)}
+              </h3>
+              <p className="text-sm font-semibold text-blue-400 flex items-center justify-center gap-1.5">
+                <UserCheck className="w-4 h-4" />
+                <span>{selectedMember.position || 'Anggota'}</span>
               </p>
-            )}
+            </div>
 
-            {selectedMember.social && (
-              <div className="flex justify-center gap-3 pt-2">
-                {selectedMember.social.instagram && (
-                  <a href={selectedMember.social.instagram} target="_blank" rel="noreferrer" className="p-2 bg-gray-800 rounded-lg text-gray-300 hover:text-white hover:bg-blue-600">
-                    <Instagram className="w-4 h-4" />
-                  </a>
-                )}
-                {selectedMember.social.email && (
-                  <a href={`mailto:${selectedMember.social.email}`} className="p-2 bg-gray-800 rounded-lg text-gray-300 hover:text-white hover:bg-blue-600">
-                    <Mail className="w-4 h-4" />
-                  </a>
-                )}
-              </div>
-            )}
+            <div className="bg-[#0B0F17] p-4 rounded-xl border border-gray-800 text-center space-y-1">
+              <p className="text-[11px] text-gray-500 font-mono uppercase tracking-wider">Nomor Anggota / NIK</p>
+              <p className="font-mono font-extrabold text-lg text-emerald-400 tracking-wider">
+                {cleanString(selectedMember.nik) || '-'}
+              </p>
+            </div>
           </div>
         </Modal>
       )}
