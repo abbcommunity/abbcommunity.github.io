@@ -254,7 +254,16 @@ export const AdminMembersPage: React.FC = () => {
     }
   };
 
-  const handleDownloadTemplate = () => {
+  const handleDownloadTemplateXlsx = () => {
+    const link = document.createElement('a');
+    link.href = './templates/template_import_anggota_abb.xlsx';
+    link.download = 'template_import_anggota_abb.xlsx';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleDownloadTemplateCsv = () => {
     const csvContent =
       'Nama Anggota,Kontak (Email / Telp),Alamat,Jabatan & Chapte,Status,Aksi,NIK,Timestamp,Email Address,Foto Profil Bebas\n' +
       'Adipta Yanuardie,08123456789,"Jl. Ahmad Yani No 2, Bekasi",Ketua Umum - Bekasi Chapter,active,valid,3275012345670001,2026-08-11 10:00:00,adipta@abbcommunity.id,https://drive.google.com/open?id=1aBSRn5GMsR8YsXJTgCyqLCS5cMO3ZPPI\n' +
@@ -503,13 +512,22 @@ export const AdminMembersPage: React.FC = () => {
                     Nama Anggota | Kontak | Alamat | Jabatan & Chapte | Status | Aksi | NIK | Timestamp | Email Address | Foto Profil Bebas
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleDownloadTemplate}
-                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-[11px] flex items-center gap-1.5 shrink-0"
-                >
-                  <Download className="w-3.5 h-3.5" /> Unduh Template CSV
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleDownloadTemplateXlsx}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-[11px] flex items-center gap-1.5 shadow-md shadow-emerald-600/20"
+                  >
+                    <Download className="w-3.5 h-3.5" /> Unduh Template Excel (.xlsx)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDownloadTemplateCsv}
+                    className="px-2.5 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold rounded-lg text-[11px] flex items-center gap-1 border border-gray-700"
+                  >
+                    <Download className="w-3 h-3" /> CSV
+                  </button>
+                </div>
               </div>
 
               {/* Upload input */}
