@@ -27,6 +27,34 @@ interface OperationState {
   progressPercent?: number;
 }
 
+/**
+ * RFC-4180 compliant CSV line parser.
+ * Preserves commas inside double quotes (e.g. "Kampung dua, RT.012/RW.002 NO.34C, 17145.")
+ */
+const parseCSVLineWithQuotes = (line: string, delimiter: string): string[] => {
+  if (delimiter === '\t') {
+    return line.split('\t').map((s) => s.trim().replace(/^"(.*)"$/, '$1'));
+  }
+
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === delimiter && !inQuotes) {
+      result.push(current.trim().replace(/^"(.*)"$/, '$1'));
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim().replace(/^"(.*)"$/, '$1'));
+  return result;
+};
+
 export const AdminMembersPage: React.FC = () => {
   const { members, loading, refetch } = useMembers(true);
   const { user } = useAuth();
@@ -205,7 +233,7 @@ export const AdminMembersPage: React.FC = () => {
 
     // Header analysis
     const headerLine = lines[0];
-    const headerCols = headerLine.split(headerLine.includes('\t') ? '\t' : ',').map((h) => h.trim().toLowerCase());
+    const headerCols = parseCSVLineWithQuotes(headerLine, headerLine.includes('\t') ? '\t' : ',').map((h) => h.trim().toLowerCase());
     
     const isHeaderLine =
       headerCols.some(h => h.includes('nama')) ||
@@ -222,7 +250,7 @@ export const AdminMembersPage: React.FC = () => {
       if (!line.trim()) continue;
 
       const delimiter = line.includes('\t') ? '\t' : ',';
-      const cols = line.split(delimiter).map((c) => c.trim().replace(/^"(.*)"$/, '$1'));
+      const cols = parseCSVLineWithQuotes(line, delimiter);
 
       let name = '';
       let email = '';
@@ -282,6 +310,8 @@ export const AdminMembersPage: React.FC = () => {
         rawPhotoURL = cols[9] || cols[4] || '';
       }
 
+      // --- SMART VALUE SANITIZATION & AUTO-CORRECTION RULES ---
+      // 1. Email vs NIK Disambiguation
       if (email && !email.includes('@')) {
         if (!nik || nik === 'active' || nik === 'valid') {
           nik = email;
@@ -289,8 +319,27 @@ export const AdminMembersPage: React.FC = () => {
         email = '';
       }
 
+      // 2. Status string in NIK column
       if (nik.toLowerCase() === 'active' || nik.toLowerCase() === 'valid' || nik.toLowerCase() === 'status') {
         nik = '';
+      }
+
+      // 3. Postal code / address fragment in NIK column (e.g. '17145.')
+      if (nik.includes('.') || nik.endsWith('"') || nik.match(/^\d{5}\.?$/)) {
+        if (!nik.startsWith('ABB') && nik.length < 16) {
+          if (!address.includes(nik)) {
+            address = address ? `${address}, ${nik.replace(/"/g, '')}` : nik.replace(/"/g, '');
+          }
+          nik = '';
+        }
+      }
+
+      // 4. Address fragment in Position/Chapter column (e.g. 'RT.012/RW.002 NO.34C')
+      if (position.match(/RT\.|RW\.|NO\.|Blok|Kel\.|Kec\.|Jl\.|Jalan/i) || chapter.match(/RT\.|RW\.|NO\.|Blok|Kel\.|Kec\.|Jl\.|Jalan/i)) {
+        const addrFragment = `${position} ${chapter}`.trim();
+        address = address ? `${address}, ${addrFragment}` : addrFragment;
+        position = 'Anggota';
+        chapter = 'Bekasi Chapter';
       }
 
       if (phone && phone.includes('@') && !email) {
