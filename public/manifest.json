@@ -1,0 +1,22 @@
+{
+  "name": "ABB Community Platform",
+  "short_name": "ABB Community",
+  "description": "Digital Home for ABB Community - Awal Bros Bikers Community",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0B0F17",
+  "theme_color": "#0B0F17",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "./images/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./images/abb-community-image-logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
