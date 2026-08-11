@@ -129,7 +129,7 @@ export const AdminMembersPage: React.FC = () => {
 
       setDeleteOpState({
         status: 'success',
-        message: `✅ BERHASIL: Menghapus ${count} data anggota secara permanen!`,
+        message: `✅ BERHASIL: Menghapus ${count} / ${total} data anggota secara permanen!`,
         importedCount: count,
         totalCount: total,
         progressPercent: 100,
@@ -139,7 +139,7 @@ export const AdminMembersPage: React.FC = () => {
       setTimeout(() => {
         setDeleteOpState({ status: 'idle', message: '' });
         refetch();
-      }, 2000);
+      }, 2500);
     } catch (err: any) {
       setDeleteOpState({
         status: 'error',
@@ -404,21 +404,16 @@ export const AdminMembersPage: React.FC = () => {
         }
       );
 
+      // Instantly transition to SUCCESS state
       setImportOpState({
         status: 'success',
-        message: `✅ BERHASIL: Menyimpan ${count} data anggota ke database Cloud Firestore!`,
+        message: `✅ BERHASIL: Menyimpan ${count} / ${total} data anggota ke database Cloud Firestore!`,
         importedCount: count,
         totalCount: total,
         progressPercent: 100,
       });
 
-      setTimeout(() => {
-        setIsImportModalOpen(false);
-        setPastedData('');
-        setParsedPreview([]);
-        setImportOpState({ status: 'idle', message: '' });
-        refetch();
-      }, 1800);
+      refetch();
     } catch (err: any) {
       setImportOpState({
         status: 'error',
@@ -460,6 +455,14 @@ export const AdminMembersPage: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleCloseImportModal = () => {
+    setIsImportModalOpen(false);
+    setPastedData('');
+    setParsedPreview([]);
+    setImportOpState({ status: 'idle', message: '' });
+    refetch();
   };
 
   return (
@@ -791,9 +794,9 @@ export const AdminMembersPage: React.FC = () => {
                 <FileSpreadsheet className="w-5 h-5 text-emerald-400" /> Import Massal Data Anggota Excel (.xlsx/.xls/.csv)
               </h3>
               <button
-                onClick={() => setIsImportModalOpen(false)}
-                disabled={importOpState.status === 'loading'}
-                className="text-gray-400 hover:text-white text-xs font-bold disabled:opacity-50"
+                type="button"
+                onClick={handleCloseImportModal}
+                className="text-gray-400 hover:text-white text-xs font-bold px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded-lg border border-gray-700 transition"
               >
                 Tutup ✕
               </button>
@@ -955,11 +958,10 @@ export const AdminMembersPage: React.FC = () => {
             <div className="flex justify-end gap-2 pt-3 border-t border-gray-800">
               <button
                 type="button"
-                disabled={importOpState.status === 'loading'}
-                onClick={() => setIsImportModalOpen(false)}
-                className="px-4 py-2 bg-gray-800 text-gray-300 rounded-xl text-xs disabled:opacity-50"
+                onClick={handleCloseImportModal}
+                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold rounded-xl text-xs transition"
               >
-                Batal
+                {importOpState.status === 'success' ? 'Selesai & Tutup' : 'Batal / Tutup'}
               </button>
               <button
                 type="button"

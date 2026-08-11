@@ -22,10 +22,14 @@ export const auditLogService = {
         metadata: metadata || {},
         timestamp: new Date().toISOString(),
       };
-      await setDoc(logRef, {
+      
+      // Non-blocking write with 1s timeout so audit logging NEVER blocks business operations
+      const writePromise = setDoc(logRef, {
         ...logData,
         createdAtServer: serverTimestamp(),
       });
+      const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 1000));
+      await Promise.race([writePromise, timeoutPromise]).catch(() => {});
     } catch (error) {
       console.warn('⚠️ Gagal mencatat audit log:', error);
     }
