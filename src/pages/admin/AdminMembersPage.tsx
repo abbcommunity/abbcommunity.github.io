@@ -1025,10 +1025,7 @@ export const AdminMembersPage: React.FC = () => {
                       )}
                     </td>
                     <td className="py-3 px-3 font-mono text-emerald-400 text-[11px] font-semibold">
-                      <p>{cleanString(m.nik) || '-'}</p>
-                      {m.plateNumber && (
-                        <p className="text-[10px] text-cyan-300 font-sans font-normal uppercase">Plat: {m.plateNumber}</p>
-                      )}
+                      {cleanString(m.nik) || '-'}
                     </td>
                     <td className="py-3 px-3 text-[10px] text-gray-500 font-mono">{m.createdAt ? m.createdAt.slice(0, 10) : '-'}</td>
                     <td className="py-3 px-3 font-mono text-blue-300 text-[11px]">{cleanString(m.email) || '-'}</td>
