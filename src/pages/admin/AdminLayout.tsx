@@ -15,6 +15,7 @@ import {
   AlertCircle,
   KeyRound,
   Zap,
+  Wallet,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useAdminPermissions } from '../../hooks/useAdminPermissions';

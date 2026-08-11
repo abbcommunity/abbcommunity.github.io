@@ -305,3 +305,36 @@ export interface GlobalStatsDoc {
   totalSocialImpactActivities: number;
   updatedAt: string;
 }
+
+export type KasPaymentStatus = 'paid' | 'pending' | 'overdue';
+export type KasPaymentMethod = 'transfer' | 'cash' | 'qris';
+
+export interface KasBillingRecord {
+  id: string;
+  memberId: string;
+  memberName: string;
+  memberNik: string;
+  memberPhone?: string;
+  periodMonth: string; // YYYY-MM e.g. "2026-08"
+  periodYear: number;  // 2026
+  amount: number;      // e.g. 20000
+  status: KasPaymentStatus;
+  paymentDate?: string;
+  paymentMethod?: KasPaymentMethod;
+  proofUrl?: string;   // Image URL or Base64 proof of transfer
+  notes?: string;
+  verifiedBy?: string; // Admin User ID / Name
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface KasSummaryMetrics {
+  totalTarget: number;
+  totalCollected: number;
+  totalOutstanding: number;
+  collectionRate: number; // percentage e.g. 85.5
+  totalMembersCount: number;
+  paidMembersCount: number;
+  pendingMembersCount: number;
+  overdueMembersCount: number;
+}

@@ -27,6 +27,7 @@ import { AdminEventsPage } from './pages/admin/AdminEventsPage';
 import { AdminStoriesPage } from './pages/admin/AdminStoriesPage';
 import { AdminDocumentsPage } from './pages/admin/AdminDocumentsPage';
 import { AdminAuditLogsPage } from './pages/admin/AdminAuditLogsPage';
+import { AdminTreasuryPage } from './pages/admin/AdminTreasuryPage';
 
 // Public Layout Wrapper
 const PublicLayout: React.FC<{ onOpenSearch: () => void }> = ({ onOpenSearch }) => {
@@ -64,6 +65,7 @@ export const App: React.FC = () => {
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboardPage />} />
             <Route path="members" element={<AdminMembersPage />} />
+            <Route path="treasury" element={<AdminTreasuryPage />} />
             <Route path="events" element={<AdminEventsPage />} />
             <Route path="stories" element={<AdminStoriesPage />} />
             <Route path="documents" element={<AdminDocumentsPage />} />
