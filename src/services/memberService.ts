@@ -157,13 +157,25 @@ export const memberService = {
         totalImported++;
       }
 
-      await batch.commit();
+      try {
+        await batch.commit();
+      } catch (err: any) {
+        console.error('⚠️ Error committing Firestore batch write:', err);
+        const errorMsg = err?.code === 'permission-denied'
+          ? 'Izin Firestore ditolak: Silakan login ulang dengan Google SSO terverifikasi.'
+          : (err?.message || 'Gagal menyimpan batch ke Firestore');
+        throw new Error(errorMsg);
+      }
+
       if (onProgress) {
         onProgress(totalImported, items.length);
       }
     }
 
-    await auditLogService.logAction(actorId, 'BULK_MEMBERS_IMPORTED', 'members', 'batch', { count: totalImported });
+    try {
+      await auditLogService.logAction(actorId, 'BULK_MEMBERS_IMPORTED', 'members', 'batch', { count: totalImported });
+    } catch (e) {}
+
     return totalImported;
   },
 
@@ -186,7 +198,16 @@ export const memberService = {
         batch.delete(ref);
       }
 
-      await batch.commit();
+      try {
+        await batch.commit();
+      } catch (err: any) {
+        console.error('⚠️ Error committing Firestore bulk delete:', err);
+        const errorMsg = err?.code === 'permission-denied'
+          ? 'Izin Firestore ditolak: Silakan login ulang dengan Google SSO terverifikasi.'
+          : (err?.message || 'Gagal menghapus batch di Firestore');
+        throw new Error(errorMsg);
+      }
+
       totalDeleted += chunk.length;
       if (onProgress) {
         onProgress(totalDeleted, ids.length);

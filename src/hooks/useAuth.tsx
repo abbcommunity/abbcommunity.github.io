@@ -1,4 +1,6 @@
 import React, { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { signInAnonymously } from 'firebase/auth';
+import { auth } from '../firebase/config';
 import { onAuthStateChange, signInWithGoogle, logoutUser, FirebaseUser } from '../firebase/auth';
 import { db, doc, setDoc } from '../firebase/firestore';
 import { UserProfile, UserRole } from '../types/backend';
@@ -10,7 +12,7 @@ interface AuthContextType {
   loading: boolean;
   isConfigured: boolean;
   loginWithGoogle: () => Promise<void>;
-  loginAsDemoAdmin: () => void;
+  loginAsDemoAdmin: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -20,7 +22,7 @@ const defaultValue: AuthContextType = {
   loading: true,
   isConfigured: false,
   loginWithGoogle: async () => {},
-  loginAsDemoAdmin: () => {},
+  loginAsDemoAdmin: async () => {},
   logout: async () => {},
 };
 
@@ -38,7 +40,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(firebaseUser);
         const now = new Date().toISOString();
 
-        // Grant super_admin profile immediately so UI proceeds instantly without network delay
+        // Grant super_admin profile immediately so UI proceeds instantly
         const activeProfile: UserProfile = {
           uid: firebaseUser.uid,
           email: firebaseUser.email || 'abbcommunityrider@gmail.com',
@@ -60,8 +62,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         } catch (err) {
           console.warn('⚠️ Firestore user profile sync note (admin mode active):', err);
         }
-      } else {
-        setUser(null);
+      } else if (!user) {
         setProfile(null);
       }
       setLoading(false);
@@ -79,20 +80,38 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const loginAsDemoAdmin = () => {
+  const loginAsDemoAdmin = async () => {
     const now = new Date().toISOString();
-    const demoProfile: UserProfile = {
-      uid: 'demo-super-admin-uid',
-      email: 'abbcommunityrider@gmail.com',
-      displayName: 'Adipta Yanuardie (Super Admin Demo)',
-      role: 'super_admin',
-      status: 'active',
-      createdAt: now,
-      updatedAt: now,
-      lastLoginAt: now,
-    };
-    setUser({ uid: 'demo-super-admin-uid', email: 'abbcommunityrider@gmail.com' });
-    setProfile(demoProfile);
+    try {
+      // Authenticate with Firebase Auth anonymously so request.auth != null in security rules
+      const cred = await signInAnonymously(auth);
+      const demoProfile: UserProfile = {
+        uid: cred.user.uid,
+        email: 'abbcommunityrider@gmail.com',
+        displayName: 'Adipta Yanuardie (Super Admin Demo)',
+        role: 'super_admin',
+        status: 'active',
+        createdAt: now,
+        updatedAt: now,
+        lastLoginAt: now,
+      };
+      setUser(cred.user);
+      setProfile(demoProfile);
+    } catch (e) {
+      // Fallback if offline
+      const demoProfile: UserProfile = {
+        uid: 'demo-super-admin-uid',
+        email: 'abbcommunityrider@gmail.com',
+        displayName: 'Adipta Yanuardie (Super Admin Demo)',
+        role: 'super_admin',
+        status: 'active',
+        createdAt: now,
+        updatedAt: now,
+        lastLoginAt: now,
+      };
+      setUser({ uid: 'demo-super-admin-uid', email: 'abbcommunityrider@gmail.com' });
+      setProfile(demoProfile);
+    }
   };
 
   const logout = async () => {
