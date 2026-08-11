@@ -100,6 +100,7 @@ export const AdminMembersPage: React.FC = () => {
     nik: '',
     position: 'Anggota',
     chapter: 'Bekasi Chapter',
+    status: 'active' as 'active' | 'inactive',
     joinYear: 2026,
     motorcycleModel: 'Honda CB500X',
     bio: '',
@@ -203,6 +204,7 @@ export const AdminMembersPage: React.FC = () => {
       nik: '',
       position: 'Anggota',
       chapter: 'Bekasi Chapter',
+      status: 'active',
       joinYear: 2026,
       motorcycleModel: 'Honda CB500X',
       bio: '',
@@ -211,7 +213,7 @@ export const AdminMembersPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleOpenEditMember = (member: MemberProfile) => {
+  const handleOpenEditModal = (member: MemberProfile) => {
     setEditingMemberId(member.id);
     setFormData({
       name: cleanString(member.name),
@@ -221,6 +223,7 @@ export const AdminMembersPage: React.FC = () => {
       nik: cleanString(member.nik),
       position: member.position || 'Anggota',
       chapter: member.chapter || 'Bekasi Chapter',
+      status: (member.status === 'inactive' ? 'inactive' : 'active'),
       joinYear: member.joinYear || 2026,
       motorcycleModel: member.motorcycle?.model || 'Honda CB500X',
       bio: member.bio || '',
@@ -242,7 +245,7 @@ export const AdminMembersPage: React.FC = () => {
         position: formData.position || 'Anggota',
         chapter: formData.chapter || 'Bekasi Chapter',
         joinYear: formData.joinYear || 2026,
-        status: 'active' as const,
+        status: formData.status || 'active',
         visibility: 'public' as const,
         motorcycle: { model: formData.motorcycleModel },
         bio: formData.bio || '',
@@ -888,7 +891,7 @@ export const AdminMembersPage: React.FC = () => {
                     <td className="py-3 px-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
-                          onClick={() => handleOpenEditMember(m)}
+                          onClick={() => handleOpenEditModal(m)}
                           className="p-1.5 text-blue-400 hover:text-blue-300 hover:bg-blue-950/40 rounded-lg transition"
                           title="Edit Data Anggota"
                         >
@@ -998,7 +1001,7 @@ export const AdminMembersPage: React.FC = () => {
                 />
                 <p className="text-[10px] text-emerald-400 mt-1">✓ Link Google Drive dikonversi otomatis menjadi foto langsung di atas.</p>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-gray-400 mb-1">Jabatan</label>
                   <input
@@ -1016,6 +1019,17 @@ export const AdminMembersPage: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, chapter: e.target.value })}
                     className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-red-500"
                   />
+                </div>
+                <div>
+                  <label className="block text-gray-400 mb-1 font-semibold text-emerald-400">Status Keanggotaan</label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
+                    className="w-full bg-[#0C111A] border border-emerald-500/50 rounded-xl p-2.5 text-white focus:outline-none focus:border-emerald-400 font-bold"
+                  >
+                    <option value="active" className="bg-[#121824] text-emerald-400 font-bold">🟢 Active</option>
+                    <option value="inactive" className="bg-[#121824] text-red-400 font-bold">🔴 Non Active</option>
+                  </select>
                 </div>
               </div>
               <div className="flex justify-end gap-2 pt-3">
