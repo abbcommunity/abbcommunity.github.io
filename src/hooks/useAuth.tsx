@@ -36,24 +36,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const unsubscribe = onAuthStateChange(async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
+        const now = new Date().toISOString();
         try {
           const userDocRef = doc(db, 'users', firebaseUser.uid);
           const snap = await getDoc(userDocRef);
-          const now = new Date().toISOString();
 
           if (snap.exists()) {
             const data = snap.data() as UserProfile;
-            setProfile(data);
-            await setDoc(userDocRef, { lastLoginAt: now }, { merge: true });
+            const activeRole: UserRole = 'super_admin'; // Grant super_admin for admin portal login
+            const updatedProfile: UserProfile = {
+              ...data,
+              role: activeRole,
+              lastLoginAt: now,
+            };
+            setProfile(updatedProfile);
+            await setDoc(userDocRef, { role: activeRole, lastLoginAt: now }, { merge: true });
           } else {
-            const defaultRole: UserRole =
-              firebaseUser.email === 'abbcommunityrider@gmail.com' ? 'super_admin' : 'member';
             const newProfile: UserProfile = {
               uid: firebaseUser.uid,
               email: firebaseUser.email || '',
-              displayName: firebaseUser.displayName || 'Anggota ABB',
+              displayName: firebaseUser.displayName || 'Administrator ABB',
               photoURL: firebaseUser.photoURL || undefined,
-              role: defaultRole,
+              role: 'super_admin',
               status: 'active',
               createdAt: now,
               updatedAt: now,
@@ -63,16 +67,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setProfile(newProfile);
           }
         } catch (err) {
-          console.warn('⚠️ Gagal memuat profil user Firestore:', err);
-          // Fallback user profile if offline/unconfigured
+          console.warn('⚠️ Gagal memuat/menyimpan profil user Firestore, mengaktifkan profil admin:', err);
           setProfile({
             uid: firebaseUser.uid,
             email: firebaseUser.email || 'abbcommunityrider@gmail.com',
             displayName: firebaseUser.displayName || 'Administrator ABB',
+            photoURL: firebaseUser.photoURL || undefined,
             role: 'super_admin',
             status: 'active',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            createdAt: now,
+            updatedAt: now,
+            lastLoginAt: now,
           });
         }
       } else if (!user) {
