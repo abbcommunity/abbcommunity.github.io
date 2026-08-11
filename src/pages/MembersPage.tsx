@@ -6,24 +6,24 @@ import { useMembers } from '../hooks/useMembers';
 import { Search, IdCard, UserCheck, ShieldCheck, Loader2 } from 'lucide-react';
 import { getAvatarUrl, handleAvatarError } from '../utils/imageUtils';
 
+interface MemberDisplayItem {
+  id: string;
+  name: string;
+  nik: string;
+  position: string;
+  status: string;
+  photoURL?: string;
+}
+
 export const MembersPage: React.FC = () => {
   const { members: firestoreMembers, loading } = useMembers(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedMember, setSelectedMember] = useState<{
-    id: string;
-    name: string;
-    nik?: string;
-    position: string;
-    photoURL?: string;
-  } | null>(null);
+  const [selectedMember, setSelectedMember] = useState<MemberDisplayItem | null>(null);
 
   const cleanString = (val?: string | null): string => {
     if (!val) return '';
     return val.trim().replace(/^['"]+/, '').replace(/['"]+$/, '').replace(/^'/, '');
   };
-
-  // Filter active members from real database
-  const activeMembers = firestoreMembers.filter((m) => m.status !== 'inactive');
 
   const extractNikNumber = (nikStr?: string | null): number => {
     if (!nikStr) return 999999;
@@ -32,12 +32,13 @@ export const MembersPage: React.FC = () => {
     return match ? parseInt(match[0], 10) : 999999;
   };
 
-  const displayMembersList = activeMembers
+  const displayMembersList = firestoreMembers
     .map((m) => ({
       id: m.id,
       name: cleanString(m.name) || 'Anggota ABB',
       nik: cleanString(m.nik) || '-',
       position: m.position || 'Anggota',
+      status: m.status || 'active',
       photoURL: m.photoURL,
     }))
     .sort((a, b) => {
@@ -114,6 +115,21 @@ export const MembersPage: React.FC = () => {
               onClick={() => setSelectedMember(m)}
               className="p-6 cursor-pointer flex flex-col items-center text-center group hover:border-blue-500/50 transition-all duration-300 shadow-lg relative overflow-hidden bg-[#101622]"
             >
+              {/* Badge Status Active / Non Active */}
+              <div className="absolute top-3 right-3 z-10">
+                {m.status === 'inactive' ? (
+                  <span className="bg-red-950/90 text-red-400 border border-red-800/80 text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1 shadow">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                    Non Active
+                  </span>
+                ) : (
+                  <span className="bg-emerald-950/90 text-emerald-400 border border-emerald-800/80 text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1 shadow">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    Active
+                  </span>
+                )}
+              </div>
+
               {/* Foto Profil */}
               <div className="relative mb-4">
                 <img
@@ -151,7 +167,7 @@ export const MembersPage: React.FC = () => {
         </div>
       )}
 
-      {/* Simple Detail Modal showing ONLY Photo, Name, NIK, & Position */}
+      {/* Simple Detail Modal showing Photo, Name, NIK, Position, & Status */}
       {selectedMember && (
         <Modal isOpen={!!selectedMember} onClose={() => setSelectedMember(null)} maxWidth="sm">
           <div className="space-y-6 text-center py-2">
@@ -175,6 +191,21 @@ export const MembersPage: React.FC = () => {
                 <UserCheck className="w-4 h-4" />
                 <span>{selectedMember.position}</span>
               </p>
+
+              {/* Modal Status Badge */}
+              <div className="pt-2 flex justify-center">
+                {selectedMember.status === 'inactive' ? (
+                  <span className="bg-red-950 text-red-400 border border-red-800 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 shadow">
+                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                    Status: Non Active
+                  </span>
+                ) : (
+                  <span className="bg-emerald-950 text-emerald-400 border border-emerald-800 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 shadow">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    Status: Active
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="bg-[#0B0F17] p-4 rounded-xl border border-gray-800 text-center space-y-1">
