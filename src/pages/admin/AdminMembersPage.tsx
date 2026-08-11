@@ -10,7 +10,8 @@ import {
   XCircle,
   Loader2,
   Download,
-  Check,
+  Pencil,
+  ExternalLink,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useMembers } from '../../hooks/useMembers';
@@ -73,6 +74,7 @@ export const AdminMembersPage: React.FC = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeletingBulk, setIsDeletingBulk] = useState(false);
@@ -89,7 +91,7 @@ export const AdminMembersPage: React.FC = () => {
     message: '',
   });
 
-  // Form single member state
+  // Form member state
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -191,50 +193,78 @@ export const AdminMembersPage: React.FC = () => {
     }
   };
 
-  const handleCreateMember = async (e: React.FormEvent) => {
+  const handleOpenAddModal = () => {
+    setEditingMemberId(null);
+    setFormData({
+      name: '',
+      email: '',
+      phone: '',
+      address: '',
+      nik: '',
+      position: 'Anggota',
+      chapter: 'Bekasi Chapter',
+      joinYear: 2026,
+      motorcycleModel: 'Honda CB500X',
+      bio: '',
+      photoURL: '',
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditMember = (member: MemberProfile) => {
+    setEditingMemberId(member.id);
+    setFormData({
+      name: cleanString(member.name),
+      email: cleanString(member.email),
+      phone: cleanString(member.phone),
+      address: cleanString(member.address),
+      nik: cleanString(member.nik),
+      position: member.position || 'Anggota',
+      chapter: member.chapter || 'Bekasi Chapter',
+      joinYear: member.joinYear || 2026,
+      motorcycleModel: member.motorcycle?.model || 'Honda CB500X',
+      bio: member.bio || '',
+      photoURL: member.photoURL || '',
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleSaveMember = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     try {
-      await memberService.createMember(
-        {
-          name: cleanString(formData.name),
-          email: cleanString(formData.email),
-          phone: cleanString(formData.phone),
-          address: cleanString(formData.address),
-          nik: cleanString(formData.nik),
-          position: formData.position || 'Anggota',
-          chapter: formData.chapter || 'Bekasi Chapter',
-          joinYear: formData.joinYear || 2026,
-          status: 'active',
-          visibility: 'public',
-          motorcycle: { model: formData.motorcycleModel },
-          bio: formData.bio || '',
-          photoURL: convertGoogleDriveUrl(formData.photoURL) || '',
-        },
-        user.uid
-      );
+      const payload = {
+        name: cleanString(formData.name),
+        email: cleanString(formData.email),
+        phone: cleanString(formData.phone),
+        address: cleanString(formData.address),
+        nik: cleanString(formData.nik),
+        position: formData.position || 'Anggota',
+        chapter: formData.chapter || 'Bekasi Chapter',
+        joinYear: formData.joinYear || 2026,
+        status: 'active' as const,
+        visibility: 'public' as const,
+        motorcycle: { model: formData.motorcycleModel },
+        bio: formData.bio || '',
+        photoURL: convertGoogleDriveUrl(formData.photoURL) || '',
+      };
+
+      if (editingMemberId) {
+        await memberService.updateMember(editingMemberId, payload, user.uid);
+      } else {
+        await memberService.createMember(payload, user.uid);
+      }
+
       setIsModalOpen(false);
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        address: '',
-        nik: '',
-        position: 'Anggota',
-        chapter: 'Bekasi Chapter',
-        joinYear: 2026,
-        motorcycleModel: 'Honda CB500X',
-        bio: '',
-        photoURL: '',
-      });
+      setEditingMemberId(null);
       refetch();
     } catch (err: any) {
-      alert('Gagal menambah anggota: ' + (err.message || err));
+      alert('Gagal menyimpan data anggota: ' + (err.message || err));
     }
   };
 
   /**
-   * Reads Native Excel 2D Array directly (Zero column shifting guaranteed!)
+   * Reads Native Excel 2D Array directly
    */
   const parseExcelSheetRows = (rows: any[][]) => {
     if (!rows || rows.length === 0) return;
@@ -311,7 +341,6 @@ export const AdminMembersPage: React.FC = () => {
         rawPhotoURL = cleanString(String(row[9] ?? row[4] ?? ''));
       }
 
-      // Clean single/double quotes from phone, email, and NIK
       phone = cleanString(phone);
       email = cleanString(email);
       nik = cleanString(nik);
@@ -661,7 +690,7 @@ export const AdminMembersPage: React.FC = () => {
             <Users className="w-5 h-5 text-red-500" /> Manajemen Anggota ABB
           </h2>
           <p className="text-gray-400 text-xs mt-1">
-            Pengelolaan direktori anggota, NIK, kepengurusan, multiple delete, dan import Excel (.xlsx/.xls/.csv) 10 Kolom.
+            Pengelolaan direktori anggota, NIK, kepengurusan, edit data, multiple delete, dan import Excel (.xlsx/.xls/.csv) 10 Kolom.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -672,7 +701,7 @@ export const AdminMembersPage: React.FC = () => {
             <FileSpreadsheet className="w-4 h-4" /> Import Excel (.xlsx) / CSV
           </button>
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={handleOpenAddModal}
             className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold text-xs rounded-xl transition flex items-center gap-2 shadow-lg shadow-red-600/20"
           >
             <Plus className="w-4 h-4" /> Tambah Anggota
@@ -840,23 +869,39 @@ export const AdminMembersPage: React.FC = () => {
                     <td className="py-3 px-3 font-mono text-emerald-400 text-[11px] font-semibold">{cleanString(m.nik) || '-'}</td>
                     <td className="py-3 px-3 text-[10px] text-gray-500 font-mono">{m.createdAt ? m.createdAt.slice(0, 10) : '-'}</td>
                     <td className="py-3 px-3 font-mono text-blue-300 text-[11px]">{cleanString(m.email) || '-'}</td>
-                    <td className="py-3 px-3 text-[10px] text-gray-400">
+                    <td className="py-3 px-3 text-[11px] font-mono text-gray-400 max-w-[140px] truncate">
                       {m.photoURL ? (
-                        <span className="text-emerald-400 flex items-center gap-1 font-semibold">
-                          <Check className="w-3 h-3" /> Ada Foto
-                        </span>
+                        <a
+                          href={m.photoURL}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-emerald-400 hover:underline flex items-center gap-1 font-sans text-[11px]"
+                          title={m.photoURL}
+                        >
+                          <ExternalLink className="w-3 h-3 shrink-0" />
+                          <span className="truncate">{m.photoURL.replace(/^https?:\/\//, '')}</span>
+                        </a>
                       ) : (
-                        <span className="text-gray-500">Default</span>
+                        <span className="text-gray-500 font-sans text-[11px]">Tanpa Foto</span>
                       )}
                     </td>
                     <td className="py-3 px-3 text-right">
-                      <button
-                        onClick={() => handleDeleteMember(m.id)}
-                        className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition"
-                        title="Hapus Anggota"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => handleOpenEditMember(m)}
+                          className="p-1.5 text-blue-400 hover:text-blue-300 hover:bg-blue-950/40 rounded-lg transition"
+                          title="Edit Data Anggota"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteMember(m.id)}
+                          className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition"
+                          title="Hapus Anggota"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -866,12 +911,14 @@ export const AdminMembersPage: React.FC = () => {
         </table>
       </div>
 
-      {/* Single Add Member Modal */}
+      {/* Add / Edit Member Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[#121824] border border-gray-800 rounded-2xl max-w-md w-full p-6 space-y-4">
-            <h3 className="text-lg font-bold text-white">Tambah Anggota Komunitas Baru</h3>
-            <form onSubmit={handleCreateMember} className="space-y-3 text-xs">
+            <h3 className="text-lg font-bold text-white">
+              {editingMemberId ? '✏️ Edit Data Anggota Komunitas' : '➕ Tambah Anggota Komunitas Baru'}
+            </h3>
+            <form onSubmit={handleSaveMember} className="space-y-3 text-xs">
               <div>
                 <label className="block text-gray-400 mb-1">Nama Lengkap</label>
                 <input
@@ -929,7 +976,7 @@ export const AdminMembersPage: React.FC = () => {
                   placeholder="https://drive.google.com/open?id=1aBSRn..."
                   value={formData.photoURL}
                   onChange={(e) => setFormData({ ...formData, photoURL: e.target.value })}
-                  className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-red-500"
+                  className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-red-500 font-mono text-[11px]"
                 />
                 <p className="text-[10px] text-emerald-400 mt-1">✓ Link Google Drive dikonversi otomatis menjadi foto langsung.</p>
               </div>
@@ -965,7 +1012,7 @@ export const AdminMembersPage: React.FC = () => {
                   type="submit"
                   className="px-4 py-2 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700"
                 >
-                  Simpan Anggota
+                  {editingMemberId ? 'Simpan Perubahan' : 'Simpan Anggota'}
                 </button>
               </div>
             </form>
