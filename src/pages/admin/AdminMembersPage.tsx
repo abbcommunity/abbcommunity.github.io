@@ -915,9 +915,27 @@ export const AdminMembersPage: React.FC = () => {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[#121824] border border-gray-800 rounded-2xl max-w-md w-full p-6 space-y-4">
-            <h3 className="text-lg font-bold text-white">
+            <h3 className="text-lg font-bold text-white text-center">
               {editingMemberId ? '✏️ Edit Data Anggota Komunitas' : '➕ Tambah Anggota Komunitas Baru'}
             </h3>
+
+            {/* Large Centered Avatar Photo Preview */}
+            <div className="flex flex-col items-center justify-center pt-1 pb-2">
+              <div className="relative group">
+                <img
+                  src={getAvatarUrl(formData.photoURL, formData.name)}
+                  alt={formData.name || 'Avatar'}
+                  onError={(e) => handleAvatarError(e, formData.photoURL, formData.name)}
+                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover border-4 border-emerald-500/80 shadow-2xl shadow-emerald-500/30 bg-gray-800 transition-transform duration-300 group-hover:scale-105"
+                />
+                <div className="absolute -bottom-1 -right-1 bg-emerald-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-gray-900 shadow-md">
+                  Live Foto
+                </div>
+              </div>
+              <p className="text-white font-extrabold text-sm mt-2 text-center">{formData.name || 'Nama Anggota'}</p>
+              <p className="text-gray-400 text-[11px] font-mono text-center">{formData.nik || 'NIK: -'}</p>
+            </div>
+
             <form onSubmit={handleSaveMember} className="space-y-3 text-xs">
               <div>
                 <label className="block text-gray-400 mb-1">Nama Lengkap</label>
@@ -969,28 +987,16 @@ export const AdminMembersPage: React.FC = () => {
                   />
                 </div>
               </div>
-              <div className="bg-[#0C111A] border border-gray-800 p-3 rounded-2xl space-y-2">
-                <label className="block text-gray-300 font-semibold mb-1">Foto Profil Bebas (Google Drive URL)</label>
-                <div className="flex items-center gap-3">
-                  <div className="relative shrink-0">
-                    <img
-                      src={getAvatarUrl(formData.photoURL, formData.name)}
-                      alt="Live Preview"
-                      onError={(e) => handleAvatarError(e, formData.photoURL, formData.name)}
-                      className="w-14 h-14 rounded-full object-cover border-2 border-emerald-500/60 shadow-md bg-gray-800 shrink-0"
-                    />
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <input
-                      type="text"
-                      placeholder="https://drive.google.com/open?id=1aBSRn..."
-                      value={formData.photoURL}
-                      onChange={(e) => setFormData({ ...formData, photoURL: e.target.value })}
-                      className="w-full bg-[#121824] border border-gray-700 rounded-xl p-2 text-white focus:outline-none focus:border-emerald-500 font-mono text-[11px]"
-                    />
-                    <p className="text-[10px] text-emerald-400">✓ Pratinjau Foto Langsung. Link Google Drive dikonversi otomatis.</p>
-                  </div>
-                </div>
+              <div>
+                <label className="block text-gray-400 mb-1">Foto Profil Bebas (Google Drive URL)</label>
+                <input
+                  type="text"
+                  placeholder="https://drive.google.com/open?id=1aBSRn..."
+                  value={formData.photoURL}
+                  onChange={(e) => setFormData({ ...formData, photoURL: e.target.value })}
+                  className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-emerald-500 font-mono text-[11px]"
+                />
+                <p className="text-[10px] text-emerald-400 mt-1">✓ Link Google Drive dikonversi otomatis menjadi foto langsung di atas.</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
