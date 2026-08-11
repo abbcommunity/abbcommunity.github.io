@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Users, Plus, Search, Trash2, FileSpreadsheet, Upload, CheckCircle, Download, HelpCircle } from 'lucide-react';
+import { Users, Plus, Search, Trash2, FileSpreadsheet, Upload, CheckCircle, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { useMembers } from '../../hooks/useMembers';
 import { memberService } from '../../services/memberService';
 import { useAuth } from '../../hooks/useAuth';
@@ -144,17 +145,7 @@ export const AdminMembersPage: React.FC = () => {
           else if (h.includes('foto') || h.includes('profil') || h.includes('drive')) rawPhotoURL = val;
         });
       } else {
-        // Positional Mapping matching the 10-column layout:
-        // Col 0: Nama Anggota
-        // Col 1: Kontak (Email / Telp)
-        // Col 2: Alamat
-        // Col 3: Jabatan & Chapte
-        // Col 4: Status
-        // Col 5: Aksi
-        // Col 6: NIK
-        // Col 7: Timestamp
-        // Col 8: Email Address
-        // Col 9: Foto Profil Bebas
+        // Positional Mapping matching 10-column template:
         name = cols[0] || '';
         const kontakCol = cols[1] || '';
         if (kontakCol.includes('@')) email = kontakCol;
@@ -202,14 +193,35 @@ export const AdminMembersPage: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const content = evt.target?.result as string;
-      if (content) {
-        parsePastedExcelCSV(content);
-      }
-    };
-    reader.readAsText(file);
+    const fileName = file.name.toLowerCase();
+
+    // Native Excel (.xlsx / .xls) parsing via SheetJS
+    if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        try {
+          const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const csvText = XLSX.utils.sheet_to_csv(worksheet);
+          parsePastedExcelCSV(csvText);
+        } catch (err: any) {
+          alert('Gagal membaca file Excel (.xlsx): ' + err.message);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      // Standard CSV / TXT parsing
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const content = evt.target?.result as string;
+        if (content) {
+          parsePastedExcelCSV(content);
+        }
+      };
+      reader.readAsText(file);
+    }
   };
 
   const handleExecuteBulkImport = async () => {
@@ -231,7 +243,7 @@ export const AdminMembersPage: React.FC = () => {
       }));
 
       const count = await memberService.bulkImportMembers(itemsToImport, user.uid);
-      setImportStatus(`Berhasil mengimpor ${count} data anggota! (Format 10 Kolom & Link Drive terproses)`);
+      setImportStatus(`Berhasil mengimpor ${count} data anggota dari Excel/CSV!`);
       setTimeout(() => {
         setIsImportModalOpen(false);
         setPastedData('');
@@ -288,7 +300,7 @@ export const AdminMembersPage: React.FC = () => {
             <Users className="w-5 h-5 text-red-500" /> Manajemen Anggota ABB
           </h2>
           <p className="text-gray-400 text-xs mt-1">
-            Pengelolaan direktori anggota, NIK, kepengurusan, dan import data massal Excel/CSV 10 Kolom.
+            Pengelolaan direktori anggota, NIK, kepengurusan, dan import data massal Excel (.xlsx/.xls/.csv).
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -296,7 +308,7 @@ export const AdminMembersPage: React.FC = () => {
             onClick={() => setIsImportModalOpen(true)}
             className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl transition flex items-center gap-2 shadow-lg shadow-emerald-600/20"
           >
-            <FileSpreadsheet className="w-4 h-4" /> Import Excel / CSV
+            <FileSpreadsheet className="w-4 h-4" /> Import Excel (.xlsx) / CSV
           </button>
           <button
             onClick={() => setIsModalOpen(true)}
@@ -494,7 +506,7 @@ export const AdminMembersPage: React.FC = () => {
           <div className="bg-[#121824] border border-gray-800 rounded-2xl max-w-3xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between border-b border-gray-800 pb-3">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <FileSpreadsheet className="w-5 h-5 text-emerald-400" /> Import Massal Data Anggota Excel / CSV (10 Kolom)
+                <FileSpreadsheet className="w-5 h-5 text-emerald-400" /> Import Massal Data Anggota Excel (.xlsx/.xls/.csv)
               </h3>
               <button
                 onClick={() => setIsImportModalOpen(false)}
@@ -505,7 +517,7 @@ export const AdminMembersPage: React.FC = () => {
             </div>
 
             <div className="space-y-3 overflow-y-auto pr-1 text-xs">
-              <div className="flex items-center justify-between bg-emerald-950/40 border border-emerald-800/40 p-3 rounded-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-emerald-950/40 border border-emerald-800/40 p-3 rounded-xl gap-2">
                 <div>
                   <p className="font-bold text-emerald-300">Struktur 10 Kolom Template Resmi ABB:</p>
                   <p className="font-mono text-[10px] text-gray-300 mt-0.5">
@@ -532,13 +544,14 @@ export const AdminMembersPage: React.FC = () => {
 
               {/* Upload input */}
               <div>
-                <label className="block text-gray-300 font-semibold mb-1">Opsi 1: Unggah File CSV / Excel</label>
+                <label className="block text-gray-300 font-semibold mb-1">Opsi 1: Unggah File Excel (.xlsx / .xls / .csv)</label>
                 <input
                   type="file"
-                  accept=".csv,.txt"
+                  accept=".xlsx,.xls,.csv,.txt"
                   onChange={handleFileUpload}
                   className="w-full bg-[#0C111A] border border-gray-800 rounded-xl p-2 text-gray-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-950 file:text-emerald-400 hover:file:bg-emerald-900"
                 />
+                <p className="text-[10px] text-gray-400 mt-1">✓ Mendukung file Excel (.xlsx / .xls) dan CSV secara langsung tanpa perlu convert.</p>
               </div>
 
               {/* Copy Paste Textarea */}
