@@ -23,24 +23,46 @@ export const MembersPage: React.FC = () => {
     return val.trim().replace(/^['"]+/, '').replace(/['"]+$/, '').replace(/^'/, '');
   };
 
-  // Combine Firestore dynamic members and static members fallback
-  const rawList = firestoreMembers.length > 0
-    ? firestoreMembers
-    : membersData.map((m, idx) => ({
+  // Build a complete map merging all static base members (82 items) with dynamic firestore members
+  const combinedMap = new Map<string, any>();
+
+  // 1. Pre-fill with all 82 members from membersData
+  membersData.forEach((m, idx) => {
+    combinedMap.set(m.id, {
+      id: m.id,
+      name: m.name,
+      nik: m.nik || `ABB${String(idx + 1).padStart(3, '0')}`,
+      position: m.position,
+      chapter: m.chapter,
+      joinYear: m.joinYear,
+      status: 'active',
+      visibility: 'public',
+      motorcycle: { model: m.motorcycle },
+      photoURL: m.photo,
+      bio: m.bio,
+    });
+  });
+
+  // 2. Override or append with Firestore dynamic / local storage members
+  firestoreMembers.forEach((m) => {
+    if (m && m.id) {
+      combinedMap.set(m.id, {
         id: m.id,
         name: m.name,
-        nik: m.nik || `ABB${String(idx + 1).padStart(3, '0')}`,
+        nik: m.nik,
         position: m.position,
         chapter: m.chapter,
         joinYear: m.joinYear,
-        status: 'active' as const,
-        visibility: 'public' as const,
-        motorcycle: { model: m.motorcycle },
-        photoURL: m.photo,
+        status: m.status || 'active',
+        visibility: m.visibility || 'public',
+        motorcycle: m.motorcycle,
+        photoURL: m.photoURL,
         bio: m.bio,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }));
+      });
+    }
+  });
+
+  const rawList = Array.from(combinedMap.values());
 
   const displayMembers = rawList.map((m) => ({
     id: m.id,
@@ -68,7 +90,7 @@ export const MembersPage: React.FC = () => {
           Member Directory ABB
         </h1>
         <p className="text-base text-gray-300">
-          Direktori resmi anggota komunitas ABB Community. Pencarian berdasarkan Nama, Nomor Anggota/NIK, dan Jabatan.
+          Direktori resmi anggota komunitas ABB Community ({displayMembers.length} Anggota). Pencarian berdasarkan Nama, Nomor Anggota/NIK, dan Jabatan.
         </p>
       </div>
 
@@ -87,7 +109,7 @@ export const MembersPage: React.FC = () => {
       </div>
 
       {/* Member Cards Grid - EXCLUSIVELY Name, NIK, & Position */}
-      {loading && firestoreMembers.length === 0 ? (
+      {loading && displayMembers.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 space-y-3 text-gray-400">
           <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
           <p className="text-xs">Memuat direktori anggota ABB...</p>
