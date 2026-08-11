@@ -652,19 +652,58 @@ export const AdminMembersPage: React.FC = () => {
   };
 
   const handleDownloadTemplateXlsx = () => {
-    const link = document.createElement('a');
-    link.href = './templates/template_import_anggota_abb.xlsx';
-    link.download = 'template_import_anggota_abb.xlsx';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const sampleData = [
+      {
+        'Nama Anggota': 'Arrio Yusman',
+        'Kontak (Email / Telp)': '08118122233',
+        'Alamat': 'Taman Kayuringin Timur No 9, Bekasi',
+        'Jabatan & Chapte': 'Anggota - Bekasi Chapter',
+        'Status': 'active',
+        'Aksi': 'valid',
+        'NIK': 'ABB001',
+        'Timestamp': '2026-08-11 10:00:00',
+        'Email Address': 'arrioyusman@icloud.com',
+        'Foto Profil Bebas': 'https://drive.google.com/open?id=1aBSRn5GMsR8YsXJTgCyqLCS5cMO3ZPPI',
+      },
+      {
+        'Nama Anggota': 'Stefanus Agung Joko Winarno',
+        'Kontak (Email / Telp)': '08129876543',
+        'Alamat': 'Bekasi Barat, Kota Bekasi',
+        'Jabatan & Chapte': 'Anggota - Bekasi Chapter',
+        'Status': 'active',
+        'Aksi': 'valid',
+        'NIK': 'ABB002',
+        'Timestamp': '2026-08-11 10:05:00',
+        'Email Address': 'stefanus@abbcommunity.id',
+        'Foto Profil Bebas': 'https://drive.google.com/open?id=1aBSRn5GMsR8YsXJTgCyqLCS5cMO3ZPPI',
+      },
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(sampleData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Template Anggota ABB');
+
+    worksheet['!cols'] = [
+      { wch: 28 }, // Nama Anggota
+      { wch: 22 }, // Kontak (Email / Telp)
+      { wch: 35 }, // Alamat
+      { wch: 28 }, // Jabatan & Chapte
+      { wch: 12 }, // Status
+      { wch: 10 }, // Aksi
+      { wch: 15 }, // NIK
+      { wch: 20 }, // Timestamp
+      { wch: 28 }, // Email Address
+      { wch: 60 }, // Foto Profil Bebas
+    ];
+
+    XLSX.writeFile(workbook, 'template_import_anggota_abb.xlsx');
   };
 
   const handleDownloadTemplateCsv = () => {
     const csvContent =
       'Nama Anggota,Kontak (Email / Telp),Alamat,Jabatan & Chapte,Status,Aksi,NIK,Timestamp,Email Address,Foto Profil Bebas\n' +
-      'Adipta Yanuardie,08123456789,"Jl. Ahmad Yani No 2, Bekasi",Ketua Umum - Bekasi Chapter,active,valid,3275012345670001,2026-08-11 10:00:00,adipta@abbcommunity.id,https://drive.google.com/open?id=1aBSRn5GMsR8YsXJTgCyqLCS5cMO3ZPPI\n' +
-      'Fatwa,08198765432,"Jl. Sudirman No 45, Jakarta",Wakil Ketua Umum - Jakarta Chapter,active,valid,3171098765430002,2026-08-11 10:05:00,fatwa@abbcommunity.id,https://drive.google.com/open?id=1aBSRn5GMsR8YsXJTgCyqLCS5cMO3ZPPI';
+      'Arrio Yusman,08118122233,"Taman Kayuringin Timur No 9, Bekasi",Anggota - Bekasi Chapter,active,valid,ABB001,2026-08-11 10:00:00,arrioyusman@icloud.com,https://drive.google.com/open?id=1aBSRn5GMsR8YsXJTgCyqLCS5cMO3ZPPI\n' +
+      'Stefanus Agung Joko Winarno,08129876543,"Bekasi Barat, Kota Bekasi",Anggota - Bekasi Chapter,active,valid,ABB002,2026-08-11 10:05:00,stefanus@abbcommunity.id,https://drive.google.com/open?id=1aBSRn5GMsR8YsXJTgCyqLCS5cMO3ZPPI';
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
