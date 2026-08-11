@@ -909,9 +909,15 @@ export const AdminMembersPage: React.FC = () => {
                       <p className="text-[10px] text-gray-500">{m.chapter || 'Bekasi Chapter'}</p>
                     </td>
                     <td className="py-3 px-3">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-800/40">
-                        {m.status || 'active'}
-                      </span>
+                      {m.status === 'inactive' ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-950 text-red-400 border border-red-800/40">
+                          inactive
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-800/40">
+                          active
+                        </span>
+                      )}
                     </td>
                     <td className="py-3 px-3 font-mono text-emerald-400 text-[11px] font-semibold">{cleanString(m.nik) || '-'}</td>
                     <td className="py-3 px-3 text-[10px] text-gray-500 font-mono">{m.createdAt ? m.createdAt.slice(0, 10) : '-'}</td>
