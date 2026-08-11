@@ -4,6 +4,7 @@ export const membersData: Member[] = [
   {
     id: 'm1',
     name: 'Adipta Yanuardie',
+    nik: 'ABB001',
     role: 'board',
     position: 'Ketua Umum',
     chapter: 'Bekasi Chapter',
@@ -19,6 +20,7 @@ export const membersData: Member[] = [
   {
     id: 'm2',
     name: 'Fatwa',
+    nik: 'ABB002',
     role: 'board',
     position: 'Wakil Ketua Umum',
     chapter: 'Jakarta Chapter',
@@ -34,6 +36,7 @@ export const membersData: Member[] = [
   {
     id: 'm3',
     name: 'Doyok',
+    nik: 'ABB003',
     role: 'founder',
     position: 'Koordinator Region & Founder',
     chapter: 'Tangerang Chapter',
@@ -48,6 +51,7 @@ export const membersData: Member[] = [
   {
     id: 'm4',
     name: 'Bonty',
+    nik: 'ABB004',
     role: 'founder',
     position: 'Koordinator Region & Founder',
     chapter: 'Bogor Chapter',
@@ -62,6 +66,7 @@ export const membersData: Member[] = [
   {
     id: 'm5',
     name: 'Harry Lupus',
+    nik: 'ABB005',
     role: 'creative',
     position: 'ABB Creative Squad & Founder',
     chapter: 'Bekasi Chapter',
@@ -76,6 +81,7 @@ export const membersData: Member[] = [
   {
     id: 'm6',
     name: 'Robby Viory Fansya',
+    nik: 'ABB006',
     role: 'coordinator',
     position: 'Lead Digital & IT Architect',
     chapter: 'Bekasi Chapter',
@@ -91,6 +97,7 @@ export const membersData: Member[] = [
   {
     id: 'm7',
     name: 'Dr. Ahmad Farhan',
+    nik: 'ABB007',
     role: 'member',
     position: 'Tim Kesehatan & Rescue',
     chapter: 'Tangerang Chapter',
@@ -105,6 +112,7 @@ export const membersData: Member[] = [
   {
     id: 'm8',
     name: 'Budi Santoso',
+    nik: 'ABB008',
     role: 'member',
     position: 'Anggota Divisi Touring',
     chapter: 'Bandung Chapter',

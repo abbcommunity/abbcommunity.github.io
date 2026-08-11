@@ -1,6 +1,7 @@
 export interface Member {
   id: string;
   name: string;
+  nik?: string;
   role: 'founder' | 'board' | 'coordinator' | 'creative' | 'member';
   position: string;
   chapter: string;
