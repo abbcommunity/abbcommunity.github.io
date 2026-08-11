@@ -37,7 +37,6 @@ const saveLocalCustomMembers = (docs: MemberProfile[]) => {
 
 /**
  * Sanitizes object by removing any properties that have undefined values.
- * Firestore throws an error if undefined values are passed in writeBatch.set() or setDoc().
  */
 const sanitizeForFirestore = <T extends Record<string, any>>(obj: T): T => {
   const cleaned: Record<string, any> = {};
@@ -50,14 +49,13 @@ const sanitizeForFirestore = <T extends Record<string, any>>(obj: T): T => {
 };
 
 export const memberService = {
-  async getAllMembers(includeMembersOnly = false): Promise<MemberProfile[]> {
+  async getAllMembers(includePrivate = false): Promise<MemberProfile[]> {
     let firestoreDocs: MemberProfile[] = [];
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
         orderBy('name', 'asc')
       );
-      // Timeout promise wrapper (2.5s max) to prevent indefinite hanging
       const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 2500));
       const snap = await Promise.race([getDocs(q), timeoutPromise]);
       
@@ -78,8 +76,26 @@ export const memberService = {
 
     const combined = Array.from(combinedMap.values());
 
-    if (includeMembersOnly) return combined;
-    return combined.filter((m) => m.visibility === 'public');
+    if (combined.length === 0) {
+      return membersData.map((m, idx) => ({
+        id: m.id,
+        name: m.name,
+        nik: m.nik || `ABB${String(idx + 1).padStart(3, '0')}`,
+        position: m.position,
+        chapter: m.chapter,
+        joinYear: m.joinYear,
+        status: 'active',
+        visibility: 'public',
+        motorcycle: { model: m.motorcycle },
+        photoURL: m.photo,
+        bio: m.bio,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }));
+    }
+
+    if (includePrivate) return combined;
+    return combined.filter((m) => !m.visibility || m.visibility === 'public');
   },
 
   async getMemberById(id: string): Promise<MemberProfile | null> {
@@ -93,17 +109,16 @@ export const memberService = {
       console.warn(`⚠️ Failed to fetch member ${id} from Firestore:`, err);
     }
 
-    // Local storage check
     const localDocs = getLocalCustomMembers();
     const foundLocal = localDocs.find((m) => m.id === id);
     if (foundLocal) return foundLocal;
 
-    // Static fallback check
     const local = membersData.find((m) => m.id === id);
     if (!local) return null;
     return {
       id: local.id,
       name: local.name,
+      nik: local.nik || 'ABB001',
       position: local.position,
       chapter: local.chapter,
       joinYear: local.joinYear,
@@ -127,11 +142,9 @@ export const memberService = {
       updatedAt: now,
     };
 
-    // Save to local storage cache immediately
     const existing = getLocalCustomMembers();
     saveLocalCustomMembers([...existing, data]);
 
-    // Save to Firestore in background
     try {
       await setDoc(newRef, sanitizeForFirestore(data));
       await auditLogService.logAction(actorId, 'MEMBER_CREATED', 'members', newRef.id, { name: member.name });
@@ -181,14 +194,10 @@ export const memberService = {
         totalImported++;
       }
 
-      // Try batch.commit() with 2.5s Timeout per chunk to prevent hanging
       try {
         const commitPromise = batch.commit();
         const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve('TIMEOUT'), 2500));
-        const res = await Promise.race([commitPromise, timeoutPromise]);
-        if (res === 'TIMEOUT') {
-          console.warn('⚠️ Firestore batch commit timeout, proceeding with local cache persistence.');
-        }
+        await Promise.race([commitPromise, timeoutPromise]);
       } catch (err: any) {
         console.warn('⚠️ Firestore batch commit note:', err);
       }
@@ -197,11 +206,9 @@ export const memberService = {
         onProgress(totalImported, items.length);
       }
 
-      // Short delay for smooth UI ticker update
       await new Promise((r) => setTimeout(r, 20));
     }
 
-    // Persist to local cache so data is ALWAYS saved instantly
     const existing = getLocalCustomMembers();
     saveLocalCustomMembers([...existing, ...newMembersToCache]);
 
@@ -247,7 +254,6 @@ export const memberService = {
       await new Promise((r) => setTimeout(r, 20));
     }
 
-    // Update local cache
     const existing = getLocalCustomMembers();
     const updatedLocal = existing.filter((m) => !ids.includes(m.id));
     saveLocalCustomMembers(updatedLocal);
@@ -268,12 +274,10 @@ export const memberService = {
       updatedAt: now,
     });
 
-    // Update local storage
     const existing = getLocalCustomMembers();
     const updatedLocal = existing.map((m) => (m.id === id ? { ...m, ...updatedFields } : m));
     saveLocalCustomMembers(updatedLocal);
 
-    // Update Firestore in background
     try {
       const docRef = doc(db, COLLECTION_NAME, id);
       await updateDoc(docRef, updatedFields);
@@ -284,11 +288,9 @@ export const memberService = {
   },
 
   async deleteMember(id: string, actorId: string): Promise<void> {
-    // Remove from local storage
     const existing = getLocalCustomMembers();
     saveLocalCustomMembers(existing.filter((m) => m.id !== id));
 
-    // Remove from Firestore in background
     try {
       const docRef = doc(db, COLLECTION_NAME, id);
       await deleteDoc(docRef);

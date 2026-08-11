@@ -8,7 +8,7 @@ import { Search, IdCard, UserCheck, ShieldCheck, Loader2 } from 'lucide-react';
 import { getAvatarUrl, handleAvatarError } from '../utils/imageUtils';
 
 export const MembersPage: React.FC = () => {
-  const { members: firestoreMembers, loading } = useMembers(false);
+  const { members: firestoreMembers, loading } = useMembers(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMember, setSelectedMember] = useState<{
     id: string;
@@ -24,24 +24,35 @@ export const MembersPage: React.FC = () => {
   };
 
   // Combine Firestore dynamic members and static members fallback
-  const displayMembers = firestoreMembers.length > 0
-    ? firestoreMembers.map((m) => ({
+  const rawList = firestoreMembers.length > 0
+    ? firestoreMembers
+    : membersData.map((m, idx) => ({
         id: m.id,
-        name: cleanString(m.name),
-        nik: cleanString(m.nik),
-        position: m.position || 'Anggota',
-        photoURL: m.photoURL,
-      }))
-    : membersData.map((m) => ({
-        id: m.id,
-        name: cleanString(m.name),
-        nik: cleanString(m.nik),
-        position: m.position || 'Anggota',
+        name: m.name,
+        nik: m.nik || `ABB${String(idx + 1).padStart(3, '0')}`,
+        position: m.position,
+        chapter: m.chapter,
+        joinYear: m.joinYear,
+        status: 'active' as const,
+        visibility: 'public' as const,
+        motorcycle: { model: m.motorcycle },
         photoURL: m.photo,
+        bio: m.bio,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       }));
 
+  const displayMembers = rawList.map((m) => ({
+    id: m.id,
+    name: cleanString(m.name) || 'Anggota ABB',
+    nik: cleanString(m.nik) || '-',
+    position: m.position || 'Anggota',
+    photoURL: m.photoURL,
+  }));
+
   const filteredMembers = displayMembers.filter((m) => {
-    const term = searchTerm.toLowerCase();
+    if (!searchTerm.trim()) return true;
+    const term = searchTerm.toLowerCase().trim();
     const name = m.name.toLowerCase();
     const nik = (m.nik || '').toLowerCase();
     const position = m.position.toLowerCase();
